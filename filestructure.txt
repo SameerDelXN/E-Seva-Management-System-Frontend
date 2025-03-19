@@ -13,6 +13,14 @@
 |-- README.md
 |-- src
     |-- app
+        |-- admin
+            |-- [...service]
+                |-- layout.jsx
+                |-- page.jsx
+        |-- components
+            |-- AdminFooter.jsx
+            |-- AdminNavbar.jsx
+            |-- AdminSidebar.jsx
         |-- favicon.ico
         |-- globals.css
         |-- layout.js
