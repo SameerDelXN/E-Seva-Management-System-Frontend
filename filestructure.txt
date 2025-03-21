@@ -1,3 +1,4 @@
+|-- .env
 |-- .gitignore
 |-- jsconfig.json
 |-- next.config.mjs
@@ -17,6 +18,9 @@
             |-- [...service]
                 |-- layout.jsx
                 |-- page.jsx
+        |-- api
+            |-- sampleApi
+                |-- route.js
         |-- components
             |-- AdminFooter.jsx
             |-- AdminNavbar.jsx
@@ -25,3 +29,5 @@
         |-- globals.css
         |-- layout.js
         |-- page.js
+    |-- utils
+        |-- mongodb.js
