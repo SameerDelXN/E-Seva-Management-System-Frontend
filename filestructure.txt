@@ -8,6 +8,9 @@
 |-- public
     |-- file.svg
     |-- globe.svg
+    |-- images
+        |-- avatar.jpg
+        |-- logo.svg
     |-- next.svg
     |-- vercel.svg
     |-- window.svg
@@ -15,8 +18,35 @@
 |-- src
     |-- app
         |-- admin
-            |-- [...service]
-                |-- layout.jsx
+            |-- agent-request
+                |-- page.jsx
+            |-- appointments
+                |-- page.jsx
+            |-- clear-database
+                |-- page.jsx
+            |-- create-bill
+                |-- page.jsx
+            |-- layout.jsx
+            |-- manage-plans
+                |-- page.jsx
+            |-- manage-services
+                |-- page.jsx
+            |-- page.jsx
+            |-- recharge-history
+                |-- page.jsx
+            |-- register-agent
+                |-- page.jsx
+            |-- register-staff
+                |-- page.jsx
+            |-- registered-agents
+                |-- page.jsx
+            |-- service-groups
+                |-- page.jsx
+            |-- staff-manager
+                |-- page.jsx
+            |-- troubleshoot
+                |-- page.jsx
+            |-- view-bill
                 |-- page.jsx
         |-- api
             |-- addAgent

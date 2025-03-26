@@ -1,9 +1,117 @@
-import React from 'react'
+"use client"
+import React, { useState } from 'react';
+import { 
+  Bell, 
+  Search, 
+  User, 
+  Settings, 
+  LogOut, 
+  Mail, 
+  HelpCircle 
+} from 'lucide-react';
+import Image from 'next/image';
 
 const AdminNavbar = () => {
-  return (
-    <div className='w-full bg-red-400 p-3 h-[7vh]'>AdminNavbar</div>
-  )
-}
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-export default AdminNavbar
+  const notifications = [
+    { id: 1, message: "New agent registration pending", time: "5 mins ago" },
+    { id: 2, message: "Service plan update required", time: "15 mins ago" }
+  ];
+
+  return (
+    <nav className="w-full bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+      {/* Search Bar */}
+      <div className="flex items-center w-1/3 relative">
+        <Search className="absolute left-3 text-gray-400" size={20} />
+        <input 
+          type="text" 
+          placeholder="Search in dashboard..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Right Side Actions */}
+      <div className="flex items-center space-x-4">
+        {/* Notifications */}
+        <div className="relative">
+          <button 
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            className="relative hover:bg-gray-100 p-2 rounded-full transition-colors"
+          >
+            <Bell className="text-gray-600" size={20} />
+            {notifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+
+          {isNotificationOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg">
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+              </div>
+              {notifications.map(notification => (
+                <div 
+                  key={notification.id} 
+                  className="p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                >
+                  <p className="text-sm text-gray-700">{notification.message}</p>
+                  <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Profile */}
+        <div className="relative">
+          <button 
+            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+            className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-full transition-colors"
+          >
+            <Image
+            width={1920}
+            height={1080} 
+              src="/images/avatar.jpg" 
+              alt="Profile" 
+              className="w-8 h-8 rounded-full"
+            />
+            <span className="text-sm font-medium text-gray-700">Admin</span>
+          </button>
+
+          {isProfileMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg">
+              <div className="py-2">
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-gray-700">
+                  <User className="mr-2" size={16} /> Profile
+                </button>
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-gray-700">
+                  <Settings className="mr-2" size={16} /> Settings
+                </button>
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-gray-700">
+                  <Mail className="mr-2" size={16} /> Messages
+                </button>
+                <button className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-gray-700">
+                  <HelpCircle className="mr-2" size={16} /> Help
+                </button>
+                <div className="border-t border-gray-200 mt-2">
+                  <button className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-red-600">
+                    <LogOut className="mr-2" size={16} /> Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default AdminNavbar;
