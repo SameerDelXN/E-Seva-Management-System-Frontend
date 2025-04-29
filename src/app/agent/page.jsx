@@ -12,8 +12,11 @@ export default function ServiceGroupsUI() {
   const [submissionStatus, setSubmissionStatus] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   
-  // Agent's location - would typically come from props or session
-  const agentLocation = "Pune"; // This should be dynamic in your actual app
+  // Agent's data from session
+  const agentData = {
+    location: "Pune", // This should be dynamic in your actual app
+    purchasePlan: "Lite" // Extracted from session data
+  };
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -26,6 +29,7 @@ export default function ServiceGroupsUI() {
     delivery: calculateDeliveryDate(new Date(), 7),
     status: 'Initiated',
     service: '',
+    serviceId: '', // Add serviceId field to store the _id
     staff: 'Not Assigned',
     amount: '',
     document: null,
@@ -92,14 +96,26 @@ export default function ServiceGroupsUI() {
     }
   };
 
-  // Open modal with selected service
-  const handleOpenModal = (serviceGroup, service) => {
-    // Find price for agent's location (Pune)
+  // Get price based on agent's plan
+  const getPriceForAgentPlan = (service) => {
+    // Find pricing for agent's location
     const locationPricing = service.planPrices.find(
-      pricing => pricing.state === "Maharashtra" && pricing.district === agentLocation
+      pricing => pricing.state === "Maharashtra" && pricing.district === agentData.location
     );
     
-    const price = locationPricing?.plans[0]?.price || 0;
+    if (!locationPricing) return 0;
+    
+    // Find the plan that matches the agent's purchased plan
+    const agentPlan = locationPricing.plans.find(
+      plan => plan.plan.toLowerCase().includes(agentData.purchasePlan.toLowerCase())
+    );
+    
+    return agentPlan?.price || locationPricing.plans[0]?.price || 0;
+  };
+
+  // Open modal with selected service
+  const handleOpenModal = (serviceGroup, service) => {
+    const price = getPriceForAgentPlan(service);
     
     setSelectedService({
       groupName: serviceGroup.name,
@@ -107,10 +123,11 @@ export default function ServiceGroupsUI() {
       price: price
     });
     
-    // Pre-populate form
+    // Pre-populate form with service data including the service ID
     setFormData({
       ...formData,
       service: service.name,
+      serviceId: service._id, // Store the service ID
       amount: price,
       status: 'Initiated',
       delivery: calculateDeliveryDate(new Date(), 7),
@@ -126,8 +143,9 @@ export default function ServiceGroupsUI() {
     setFormLoading(true);
     setSubmissionStatus(null);
     
-    // Format the service field
+    // Format the service field properly for the API
     const serviceData = {
+      _id: formData.serviceId, // Include the service ID
       name: formData.service,
       status: {
         name: formData.status || "Initiated",
@@ -143,9 +161,10 @@ export default function ServiceGroupsUI() {
       amount: parseFloat(formData.amount),
       date: new Date(formData.date).toISOString()
     };
-    
+    console.log(submissionData);
     try {
-      const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
+      // Update the API endpoint to your actual endpoint
+      const response = await fetch("http://localhost:3001/api/applications/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,6 +196,7 @@ export default function ServiceGroupsUI() {
           delivery: calculateDeliveryDate(new Date(), 7),
           status: 'Initiated',
           service: '',
+          serviceId: '',
           staff: 'Not Assigned',
           amount: '',
           document: null,
@@ -232,7 +252,7 @@ export default function ServiceGroupsUI() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Dokument Guru Services</h1>
           <p className="text-gray-600">Browse available services and apply online</p>
-          <p className="text-sm text-gray-500 mt-1">Showing prices for: {agentLocation}</p>
+          <p className="text-sm text-gray-500 mt-1">Showing prices for: {agentData.location} ({agentData.purchasePlan} Plan)</p>
         </div>
         
         {/* Search Bar */}
@@ -273,12 +293,7 @@ export default function ServiceGroupsUI() {
                 {group.services && group.services.length > 0 ? (
                   <div className="space-y-3">
                     {group.services.map((service) => {
-                      // Find price for agent's location (Pune)
-                      const locationPricing = service.planPrices.find(
-                        pricing => pricing.state === "Maharashtra" && pricing.district === agentLocation
-                      );
-                      
-                      const price = locationPricing?.plans[0]?.price || 0;
+                      const price = getPriceForAgentPlan(service);
                       
                       return (
                         <div key={service._id} className="flex justify-between items-center p-2 rounded-md hover:bg-gray-50">

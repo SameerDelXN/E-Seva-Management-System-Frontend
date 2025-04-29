@@ -1052,7 +1052,7 @@ const [newplan,selectnewplan]=useState([]);
         } else {
             console.log("asdfaef this",newStatus)
             try {
-                const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`, {
+                const response = await fetch(`http://localhost:3001/api/admin/newService/update-service/${formData.id}`, {
                   method: "PATCH",
                   headers: {
                     "Content-Type": "application/json"
