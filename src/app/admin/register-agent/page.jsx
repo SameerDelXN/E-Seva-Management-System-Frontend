@@ -162,13 +162,32 @@ const AgentManagement = () => {
     const [alertMessage, setAlertMessage] = useState(null);
     const [activeSection, setActiveSection] = useState('personal');
     const [previewImages, setPreviewImages] = useState({});
+    const [plans, setPlans] = useState([]);
     const fileInputRefs = {
       aadharCard: useRef(null),
       shopLicense: useRef(null),
       ownerPhoto: useRef(null),
       supportingDocument: useRef(null),
     };
-  
+    const fetchPlans=async()=>{
+
+      try {
+        const fetchResponse = await fetch("https://dokument-guru-backend.vercel.app/api/admin/manage-plan/fetch-plans", {
+          method: 'GET'
+        });
+        
+        if (fetchResponse.ok) {
+          const fetchData = await fetchResponse.json();
+          console.log("sdfg",fetchData.plans);
+          setPlans(fetchData.plans || []);
+        }
+      } catch (fetchError) {
+        console.error("Error fetching updated agents:", fetchError.message);
+      }
+
+    }
+
+   fetchPlans();
     useEffect(() => {
       if (editingAgent) {
         setIsLoading(true);
@@ -555,7 +574,7 @@ const AgentManagement = () => {
                   </div>
                 </div>
   
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Plan</label>
                   <input
                     name="purchasePlan"
@@ -564,7 +583,28 @@ const AgentManagement = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder="Enter plan details"
                   />
-                </div>
+                </div> */}
+                <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Plan</label>
+          <div className="relative">
+            <select
+              name="purchasePlan"
+              value={formData.purchasePlan}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pr-10"
+            >
+              <option value="">Select a plan</option>
+              {plans.map((plan) => (
+                <option key={plan._id} value={plan.name}>
+                  {plan.name} (₹{plan.price})
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+              <FiChevronDown className="text-gray-400" />
+            </div>
+          </div>
+        </div>
   
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date of Purchase</label>

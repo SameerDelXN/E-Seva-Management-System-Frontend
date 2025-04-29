@@ -890,6 +890,8 @@ const ServiceModal = ({
     planPrices:[],
     group: ''
   });
+  const [locations ,setLocations]=useState(service?.planPrice || []);
+  const [plans,setPlans]=useState([]);
 const [newplan,selectnewplan]=useState([]);
   const [activeSection, setActiveSection] = useState('services');
   const [statuses, setStatuses] = useState(service?.status || [
@@ -902,6 +904,44 @@ const [newplan,selectnewplan]=useState([]);
     { id: 7, status: 'Pending', color: '#FF0404', askReason: false },
   ]);
 
+
+  console.log("dummy is",service);
+// Fetch function
+// const fetchLocations = async () => {
+//   try {
+//     const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/location/fetch-all');
+//     if (!response.ok) {
+//       throw new Error('Failed to fetch locations');
+//     }
+//     const data = await response.json();
+//     console.log("locations", data.locations || []);
+//     setLocations(data.locations || []);
+//   } catch (err) {
+//     console.error('Error fetching locations:', err);
+//   }
+// };
+
+
+// const fetchPlans = async () => {
+//   try {
+//     const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/manage-plan/fetch-plans');
+//     if (!response.ok) {
+//       throw new Error('Failed to fetch plans');
+//     }
+//     const data = await response.json();
+//     console.log("plans", data.plans || []);
+//     setPlans(data.plans || []);
+//   } catch (err) {
+//     console.error('Error fetching plans:', err);
+//   }
+// };
+
+
+// // Call fetchLocations in useEffect
+// useEffect(() => {
+//   // fetchLocations();
+//   fetchPlans();
+// }, []);
   const [newStatus, setNewStatus] = useState({
     name: '',
     hexcode: '#32a852',
@@ -924,6 +964,7 @@ const [newplan,selectnewplan]=useState([]);
         id: service.id || ''
       });
     }
+    
   }, [service]);
 
   const handleAddPricesClick = (plan) => {
@@ -1097,7 +1138,7 @@ const [newplan,selectnewplan]=useState([]);
   const handleSubmit = async(e) => {
     e.preventDefault();
     // onSave(formData);
-    // console.log("sdfe",formData);
+     console.log("sdfe",formData);
 
     try {
         const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
@@ -1128,7 +1169,7 @@ const [newplan,selectnewplan]=useState([]);
 
   const handleAvailablePlansClick = (plan) => {
 
-   
+   console.log("plans in location",plan);
     setSelectedPlan(plan);
     selectnewplan(plan.plans)
     console.log("updated",plan.plans);
@@ -1625,8 +1666,8 @@ const [newplan,selectnewplan]=useState([]);
                         </tr>
                       </tbody> */}
 
-<tbody className="divide-y divide-gray-200">
-  {formData.planPrices.map((item, index) => (
+{/* <tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
     <tr key={item._id}>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location?.district}</td>
@@ -1638,6 +1679,29 @@ const [newplan,selectnewplan]=useState([]);
             name: item.location?.district,
             state: item.location?.state,
             plans: item.plans // send plans if needed
+          })}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+        >
+          Available Plans
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody> */}
+
+<tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
+    <tr key={item._id}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.district}</td> 
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button
+          onClick={() => handleAvailablePlansClick({
+            id: item._id,
+            name: item.district,
+            state: item.state,
+            plans: item.plans
           })}
           className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
         >
@@ -1790,18 +1854,18 @@ const [newplan,selectnewplan]=useState([]);
 
 <tbody className="divide-y divide-gray-200">
   {newplan?.map((planItem, index) => (
-    <tr key={planItem._id}>
+    <tr key={index}>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{planItem?.plan?.name}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{planItem.planName}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         <button 
           onClick={() => handleAddPricesClick({
-            id: planItem._id,
-            name: planItem.plan.name,
-            govtPrice: planItem.plan.price,
+            id: planItem.plan_id,
+            name: planItem.planName,
+            govtPrice: planItem.price,
             commissionPrice: '43.00',
             taxPercentage: '0.00',
-            tatkalGovtPrice: planItem.plan.price,
+            tatkalGovtPrice: planItem.price,
             tatkalCommissionPrice: '43.00',
             tatkalTaxPercentage: '0.00'
           })}

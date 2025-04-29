@@ -14,7 +14,7 @@ const ServiceCard = ({
 }) => {
   const [visibility, setVisibility] = useState('both');
   const [availability, setAvailability] = useState('subscription');
-  console.log(service);
+  // console.log(service);
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
@@ -66,8 +66,62 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
     availablity: "subscription",
     price: 0,
     planPrices: [],
-    status: []
+    status: [
+      {
+                name: "Active",
+                hexcode: "#4CAF50",
+                askreason: false
+              }
+    ]
+    
   });
+const [locations,setLocations]=useState(null);
+const [plans,setPlans]=useState(null);
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPrepareData = async () => {
+      try {
+        // setLoading(true);
+        const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/prepare');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch prepare data');
+        }
+        
+        const data = await response.json();
+        setLocations(data.locations || []);
+        setPlans(data.plans || []);
+        
+        // Initialize planPrices structure
+        const initialPlanPrices = data.locations?.map(location => ({
+          location: location._id,
+          state:location.state,
+          district:location.district,
+          plans: data.plans?.map(plan => ({
+            plan: plan._id,
+            planName:plan.name,
+            price: formData.price || 0
+          })) || []
+        })) || [];
+
+        console.log("dasf",initialPlanPrices);
+        
+        setFormData(prev => ({
+          ...prev,
+          planPrices: initialPlanPrices
+        }));
+        console.log("data with locatiosn is ",formData);
+        // setLoading(false);
+      } catch (error) {
+        console.error('Error fetching prepare data:', error);
+        // setError('Failed to load required data');
+        // setLoading(false);
+      }
+    };
+    
+    fetchPrepareData();
+  }, [isOpen]);
 
   // Update formData.serviceGroupId when serviceGroups changes and it's empty
   useEffect(() => {
@@ -110,6 +164,7 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("main",formData);
     onSave(formData);
     onClose();
   };
@@ -262,6 +317,384 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
   );
 };
 
+// const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
+//   const [formData, setFormData] = useState({
+//     name: "",
+//     serviceGroupId: serviceGroups && serviceGroups.length > 0 ? serviceGroups[0]?._id : "",
+//     document: [""],
+//     visibility: "both",
+//     availablity: "subscription",
+//     price: 0,
+//     planPrices: [],
+//     status: [
+//       {
+//         name: "Active",
+//         hexcode: "#4CAF50",
+//         askreason: false
+//       }
+//     ]
+//   });
+
+//   const [locations, setLocations] = useState([]);
+//   const [plans, setPlans] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+
+//   useEffect(() => {
+//     if (!isOpen) return;
+
+//     const fetchData = async () => {
+//       try {
+//         setLoading(true);
+//         const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/prepare');
+        
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch required data');
+//         }
+        
+//         const data = await response.json();
+//         setLocations(data.locations || []);
+//         setPlans(data.plans || []);
+        
+//         // Initialize planPrices with all locations and plans
+//         const initialPlanPrices = data.locations.map(location => ({
+//           location: location._id,
+//           plans: data.plans.map(plan => ({
+//             plan: plan._id,
+//             price: 0
+//           }))
+//         }));
+        
+//         setFormData(prev => ({
+//           ...prev,
+//           planPrices: initialPlanPrices
+//         }));
+        
+//         setLoading(false);
+//       } catch (error) {
+//         console.error('Error fetching data:', error);
+//         setError('Failed to load required data');
+//         setLoading(false);
+//       }
+//     };
+    
+//     fetchData();
+//   }, [isOpen]);
+
+//   // Update formData.serviceGroupId when serviceGroups changes and it's empty
+//   useEffect(() => {
+//     if (serviceGroups && serviceGroups.length > 0 && !formData.serviceGroupId) {
+//       setFormData(prev => ({
+//         ...prev,
+//         serviceGroupId: serviceGroups[0]?._id
+//       }));
+//     }
+//   }, [serviceGroups]);
+
+//   const handleInputChange = (e) => {
+//     const { name, value } = e.target;
+//     setFormData(prev => ({ ...prev, [name]: value }));
+//   };
+
+//   // Modified to update all plan prices when base price changes
+//   const handleNumericChange = (e) => {
+//     const { name, value } = e.target;
+//     const numericValue = Number(value);
+    
+//     if (name === 'price') {
+//       // Update the base price
+//       setFormData(prev => ({ 
+//         ...prev, 
+//         [name]: numericValue,
+//         // Also update all plan prices to match the new base price
+//         planPrices: prev.planPrices.map(location => ({
+//           location: location.location,
+//           plans: location.plans.map(plan => ({
+//             plan: plan.plan,
+//             price: numericValue
+//           }))
+//         }))
+//       }));
+//     } else {
+//       // For other numeric fields, just update normally
+//       setFormData(prev => ({ ...prev, [name]: numericValue }));
+//     }
+//   };
+
+//   const addDocument = () => {
+//     setFormData(prev => ({
+//       ...prev,
+//       document: [...prev.document, ""]
+//     }));
+//   };
+
+//   const handleDocumentChange = (index, value) => {
+//     const newDocuments = [...formData.document];
+//     newDocuments[index] = value;
+//     setFormData(prev => ({
+//       ...prev,
+//       document: newDocuments
+//     }));
+//   };
+
+//   const removeDocument = (index) => {
+//     const newDocuments = formData.document.filter((_, i) => i !== index);
+//     setFormData(prev => ({
+//       ...prev,
+//       document: newDocuments
+//     }));
+//   };
+
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+    
+//     if (!formData.name.trim()) {
+//       setError('Service name is required');
+//       return;
+//     }
+
+//     // Clean document array (remove empty strings)
+//     const cleanedData = {
+//       ...formData,
+//       document: formData.document.filter(doc => doc.trim() !== '')
+//     };
+
+//     onSave(cleanedData);
+//     onClose();
+//   };
+
+//   if (!isOpen) return null;
+
+//   if (loading) {
+//     return (
+//       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+//         <div className="bg-white rounded-lg p-6 w-full max-w-md text-center">
+//           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto mb-4"></div>
+//           <p>Loading service data...</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+//       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+//         <div className="flex justify-between items-center mb-6">
+//           <h2 className="text-2xl font-semibold">Add New Service</h2>
+//           <button
+//             onClick={onClose}
+//             className="text-gray-500 hover:text-gray-700"
+//           >
+//             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//             </svg>
+//           </button>
+//         </div>
+
+//         {error && (
+//           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+//             <p>{error}</p>
+//           </div>
+//         )}
+
+//         <form onSubmit={handleSubmit} className="space-y-6">
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
+//             <input
+//               type="text"
+//               name="name"
+//               value={formData.name}
+//               onChange={handleInputChange}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               required
+//             />
+//           </div>
+
+//           {/* Service Group Dropdown */}
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-1">Service Group</label>
+//             <select
+//               name="serviceGroupId"
+//               value={formData.serviceGroupId}
+//               onChange={handleInputChange}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               required
+//             >
+//               {serviceGroups && serviceGroups.map((group) => (
+//                 <option key={group._id} value={group._id}>
+//                   {group.name}
+//                 </option>
+//               ))}
+//               {(!serviceGroups || serviceGroups.length === 0) && (
+//                 <option value="">No groups available</option>
+//               )}
+//             </select>
+//           </div>
+
+//           <div>
+//             <div className="flex justify-between items-center mb-2">
+//               <label className="block text-sm font-medium text-gray-700">Required Documents</label>
+//               <button
+//                 type="button"
+//                 onClick={addDocument}
+//                 className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+//               >
+//                 <PlusCircle className="w-4 h-4 mr-1" />
+//                 Add Document
+//               </button>
+//             </div>
+            
+//             {formData.document.map((doc, index) => (
+//               <div key={index} className="flex items-center mb-2">
+//                 <input
+//                   type="text"
+//                   value={doc}
+//                   onChange={(e) => handleDocumentChange(index, e.target.value)}
+//                   placeholder="Document name"
+//                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//                 />
+//                 {formData.document.length > 1 && (
+//                   <button
+//                     type="button"
+//                     onClick={() => removeDocument(index)}
+//                     className="ml-2 text-red-500 hover:text-red-700"
+//                   >
+//                     <Trash2 className="w-4 h-4" />
+//                   </button>
+//                 )}
+//               </div>
+//             ))}
+//           </div>
+
+//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+//               <select
+//                 name="visibility"
+//                 value={formData.visibility}
+//                 onChange={handleInputChange}
+//                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               >
+//                 <option value="both">Both</option>
+//                 <option value="b2b">B2B</option>
+//                 <option value="b2c">B2C</option>
+//               </select>
+//             </div>
+            
+//             <div>
+//               <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+//               <select
+//                 name="availablity"
+//                 value={formData.availablity}
+//                 onChange={handleInputChange}
+//                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//               >
+//                 <option value="subscription">Subscription</option>
+//                 <option value="oneTime">One Time</option>
+//                 <option value="both">Both</option>
+//               </select>
+//             </div>
+//           </div>
+
+//           <div>
+//             <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (₹)</label>
+//             <input
+//               type="number"
+//               name="price"
+//               value={formData.price}
+//               onChange={handleNumericChange}
+//               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+//             />
+//             <p className="mt-1 text-sm text-gray-500 italic">
+//               Changing base price will update all plan prices automatically
+//             </p>
+//           </div>
+
+//           {/* Display the plan prices structure */}
+//           {locations.length > 0 && plans.length > 0 && (
+//             <div>
+//               <h3 className="text-sm font-medium text-gray-700 mb-2">Plan Prices by Location</h3>
+//               <div className="border rounded-md overflow-hidden">
+//                 <table className="min-w-full divide-y divide-gray-200">
+//                   <thead className="bg-gray-50">
+//                     <tr>
+//                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+//                       {plans.map(plan => (
+//                         <th key={plan._id} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                           {plan.name}
+//                         </th>
+//                       ))}
+//                     </tr>
+//                   </thead>
+//                   <tbody className="bg-white divide-y divide-gray-200">
+//                     {locations.map(location => {
+//                       const locationPrices = formData.planPrices.find(lp => lp.location === location._id);
+//                       return (
+//                         <tr key={location._id}>
+//                           <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+//                             {location.name}
+//                           </td>
+//                           {plans.map(plan => {
+//                             const planPrice = locationPrices?.plans.find(p => p.plan === plan._id);
+//                             return (
+//                               <td key={`${location._id}-${plan._id}`} className="px-4 py-2 whitespace-nowrap">
+//                                 <input
+//                                   type="number"
+//                                   value={planPrice?.price || 0}
+//                                   onChange={(e) => {
+//                                     const newPrice = Number(e.target.value);
+//                                     setFormData(prev => {
+//                                       const newPlanPrices = [...prev.planPrices];
+//                                       const locationIndex = newPlanPrices.findIndex(lp => lp.location === location._id);
+                                      
+//                                       if (locationIndex >= 0) {
+//                                         const planIndex = newPlanPrices[locationIndex].plans.findIndex(p => p.plan === plan._id);
+//                                         if (planIndex >= 0) {
+//                                           newPlanPrices[locationIndex].plans[planIndex].price = newPrice;
+//                                         }
+//                                       }
+                                      
+//                                       return {
+//                                         ...prev,
+//                                         planPrices: newPlanPrices
+//                                       };
+//                                     });
+//                                   }}
+//                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+//                                 />
+//                               </td>
+//                             );
+//                           })}
+//                         </tr>
+//                       );
+//                     })}
+//                   </tbody>
+//                 </table>
+//               </div>
+//             </div>
+//           )}
+
+//           <div className="flex justify-end space-x-3 pt-4">
+//             <button
+//               type="button"
+//               onClick={onClose}
+//               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+//             >
+//               Cancel
+//             </button>
+//             <button
+//               type="submit"
+//               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+//             >
+//               Save Service
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// };
+
 const App = () => {
   const [services, setServices] = useState([]);
   const [serviceGroups, setServiceGroups] = useState([]);
@@ -283,6 +716,7 @@ const App = () => {
         const data = await res.json();
 
         if (res.ok) {
+          
           console.log("✅ Service Groups:", data.serviceGroups);
           setServiceGroups(data.serviceGroups || []);
         } else {
@@ -394,11 +828,14 @@ const App = () => {
       price: serviceData.price || 0,
       planPrices: serviceData.planPrices && Array.isArray(serviceData.planPrices) 
         ? serviceData.planPrices.map(planPrice => ({
-            location: planPrice.locationId,
+            locationId: planPrice.location,
+            state:planPrice.state,
+            district:planPrice.district,
             plans: planPrice.plans && Array.isArray(planPrice.plans) 
               ? planPrice.plans.map(p => ({
-                  plan: p.planId,
-                  price: p.price
+                  plan: p.plan,
+                  planName:p.planName,
+                  price: serviceData.price
                 }))
               : []
           }))
@@ -415,7 +852,7 @@ const App = () => {
     console.log("Cleaned data for API:", cleanedData);
     
     try {
-      const res = await fetch('https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
+      const res = await fetch(' https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -428,6 +865,8 @@ const App = () => {
       if (res.ok) {
         console.log("✅ Service added successfully:", result);
         fetchServices();
+        setModalOpen(false);
+        setCurrentService(null);
       } else {
         console.error("❌ Failed to add service:", result.message || result);
         alert(`Failed to add service: ${result.message || "Unknown error"}`);
