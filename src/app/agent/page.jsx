@@ -116,7 +116,7 @@ export default function ServiceGroupsUI() {
   // Open modal with selected service
   const handleOpenModal = (serviceGroup, service) => {
     const price = getPriceForAgentPlan(service);
-    
+    console.log(service.serviceId)
     setSelectedService({
       groupName: serviceGroup.name,
       ...service,
@@ -127,13 +127,13 @@ export default function ServiceGroupsUI() {
     setFormData({
       ...formData,
       service: service.name,
-      serviceId: service._id, // Store the service ID
+      serviceId: service.serviceId, // Store the service ID
       amount: price,
       status: 'Initiated',
       delivery: calculateDeliveryDate(new Date(), 7),
       date: new Date().toISOString().split('T')[0]
     });
-    
+ 
     setIsModalOpen(true);
   };
 
@@ -161,10 +161,10 @@ export default function ServiceGroupsUI() {
       amount: parseFloat(formData.amount),
       date: new Date(formData.date).toISOString()
     };
-    console.log(submissionData);
+    console.log("final",submissionData);
     try {
       // Update the API endpoint to your actual endpoint
-      const response = await fetch("http://localhost:3001/api/applications/create", {
+      const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

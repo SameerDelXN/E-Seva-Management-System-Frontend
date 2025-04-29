@@ -28,7 +28,7 @@ export default function StaffManagerDashboard() {
     { id: 4, name: "Alex Johnson", status: "Available" }
   ]);
 
-  const API_BASE_URL = "http://localhost:3001/api/application";
+  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
 
   // Global status options with color codes
   const globalStatusOptions = [
@@ -127,7 +127,7 @@ export default function StaffManagerDashboard() {
         }
       };
       
-      const response = await fetch(`${API_BASE_URL}/update`, {
+      const response = await fetch(`${API_BASE_URL}/update/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -256,6 +256,7 @@ export default function StaffManagerDashboard() {
   };
 
   const saveStatus = (id) => {
+    console.log(id);
     updateStatus(id, editingStatus, statusReason);
   };
 
