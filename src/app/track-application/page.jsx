@@ -66,10 +66,21 @@ export default function TrackApplication() {
   };
 
   const getStatusBadgeClass = (status) => {
+    // Check if status is an object with hexcode
+    if (status && typeof status === 'object' && status.hexcode) {
+      // Return inline style based on the hexcode
+      return {
+        backgroundColor: `${status.hexcode}20`, // Adding transparency to hexcode
+        color: status.hexcode
+      };
+    }
+    
+    // For backward compatibility with string status
     switch (status) {
       case 'Completed':
         return 'bg-green-100 text-green-600';
       case 'Pending':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-600';
       case 'In Progress':
         return 'bg-emerald-100 text-emerald-600';
@@ -77,9 +88,20 @@ export default function TrackApplication() {
         return 'bg-cyan-100 text-cyan-600';
       case 'Rejected':
         return 'bg-red-100 text-red-600';
+      case 'Initiated':
+        return 'bg-purple-100 text-purple-600';
+      case 'Active':
+        return 'bg-green-100 text-green-600';
+      case 'created':
+        return 'bg-blue-100 text-blue-600';
       default:
         return 'bg-gray-100 text-gray-600';
     }
+  };
+  
+  // Get display status name
+  const getStatusName = (status) => {
+    return status && typeof status === 'object' ? status.name : status;
   };
 
   // Format date to be more readable
@@ -96,15 +118,28 @@ export default function TrackApplication() {
   };
 
   // Define the tracking stages and check if each stage is complete based on the status
-  const trackingStages = [
-    { name: 'Initiated', description: 'Application submitted' },
-    { name: 'In Progress', description: 'Processing documents' },
-    { name: 'Visited', description: 'Client visited office' },
-    { name: 'Completed', description: 'Application processed successfully' }
-  ];
+  const getTrackingStages = (application) => {
+    // If we have status array in the service, use that
+    if (application?.service?.status && Array.isArray(application.service.status)) {
+      return application.service.status.map(status => ({
+        name: status.name,
+        description: `Application ${status.name.toLowerCase()}`,
+        hexcode: status.hexcode
+      }));
+    }
+    
+    // Fallback to default stages
+    return [
+      { name: 'Initiated', description: 'Application submitted' },
+      { name: 'In Progress', description: 'Processing documents' },
+      { name: 'Visited', description: 'Client visited office' },
+      { name: 'Completed', description: 'Application processed successfully' }
+    ];
+  };
 
-  const getCurrentStageIndex = (status) => {
-    const statusIndex = trackingStages.findIndex(stage => stage.name === status);
+  const getCurrentStageIndex = (currentStatus, stages) => {
+    const statusName = getStatusName(currentStatus);
+    const statusIndex = stages.findIndex(stage => stage.name === statusName);
     return statusIndex !== -1 ? statusIndex : 0;
   };
 
@@ -215,7 +250,7 @@ export default function TrackApplication() {
                   <div className="space-y-4">
                     {applications.map((app, index) => (
                       <motion.div
-                        key={app.id}
+                        key={app._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 + index * 0.1 }}
@@ -224,18 +259,35 @@ export default function TrackApplication() {
                         <div className="flex justify-between items-start flex-wrap">
                           <div>
                             <h3 className="font-medium text-gray-800">{app.name}</h3>
-                            <p className="text-gray-500 text-sm mt-1">Service: {app.serviceGroup}</p>
+                            <p className="text-gray-500 text-sm mt-1">Service: {app.service?.name || 'N/A'}</p>
                             <p className="text-gray-500 text-sm">
-                              Appointment: {formatDate(app.date)}, {app.timeSlot}
+                              Appointment: {formatDate(app.date || app.createdAt)}
                             </p>
-                            {app.price && (
-                              <p className="text-gray-600 text-sm mt-2">Price: {app.price}</p>
+                            {app.delivery && (
+                              <p className="text-gray-500 text-sm">
+                                Expected Delivery: {app.delivery}
+                              </p>
+                            )}
+                            {app.amount > 0 && (
+                              <p className="text-gray-600 text-sm mt-2">Amount: ₹{app.amount}</p>
                             )}
                           </div>
                           <div className="flex flex-col items-end">
-                            <span className={`text-sm px-3 py-1 rounded-full font-medium ${getStatusBadgeClass(app.status)}`}>
-                              {app.status}
-                            </span>
+                            {app?.currentStatus ? (
+                              <span 
+                                className="text-sm px-3 py-1 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: `${app.currentStatus.hexcode}20`, 
+                                  color: app.currentStatus.hexcode
+                                }}
+                              >
+                                {app.currentStatus.name}
+                              </span>
+                            ) : (
+                              <span className={`text-sm px-3 py-1 rounded-full font-medium ${getStatusBadgeClass(app.status)}`}>
+                                {app.status}
+                              </span>
+                            )}
                             <motion.button 
                               whileHover={{ x: 3 }}
                               className="text-green-600 text-sm mt-3 hover:underline flex items-center"
@@ -323,10 +375,26 @@ export default function TrackApplication() {
                   <div className="bg-gray-50 bg-opacity-80 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-gray-100 shadow-sm">
                     <div className="flex flex-wrap items-center gap-4 justify-between mb-4">
                       {/* Status pill */}
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClass(selectedApplication.status)}`}>
-                        <span className="w-2 h-2 rounded-full bg-current mr-1.5"></span>
-                        {selectedApplication.status}
-                      </span>
+                      {selectedApplication.currentStatus ? (
+                        <span 
+                          className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium" 
+                          style={{
+                            backgroundColor: `${selectedApplication.currentStatus.hexcode}20`, 
+                            color: selectedApplication.currentStatus.hexcode
+                          }}
+                        >
+                          <span 
+                            className="w-2 h-2 rounded-full mr-1.5" 
+                            style={{ backgroundColor: selectedApplication.currentStatus.hexcode }}
+                          ></span>
+                          {selectedApplication.currentStatus.name}
+                        </span>
+                      ) : (
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClass(selectedApplication.status)}`}>
+                          <span className="w-2 h-2 rounded-full bg-current mr-1.5"></span>
+                          {selectedApplication.status}
+                        </span>
+                      )}
                       
                       {/* Created date */}
                       <div className="text-gray-500 text-sm flex items-center">
@@ -346,8 +414,8 @@ export default function TrackApplication() {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Service Group</p>
-                          <p className="font-medium">{selectedApplication.serviceGroup}</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Service</p>
+                          <p className="font-medium">{selectedApplication.service?.name || 'N/A'}</p>
                         </div>
                       </div>
                       
@@ -358,8 +426,8 @@ export default function TrackApplication() {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Price</p>
-                          <p className="font-medium">{selectedApplication.price}</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Amount</p>
+                          <p className="font-medium">₹{selectedApplication.amount || '0'}</p>
                         </div>
                       </div>
                       
@@ -371,7 +439,7 @@ export default function TrackApplication() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 mb-0.5">Appointment Date</p>
-                          <p className="font-medium">{selectedApplication.date}</p>
+                          <p className="font-medium">{formatDate(selectedApplication.date)}</p>
                         </div>
                       </div>
                       
@@ -382,182 +450,292 @@ export default function TrackApplication() {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Time Slot</p>
-                          <p className="font-medium">{selectedApplication.timeSlot}</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Expected Delivery</p>
+                          <p className="font-medium">{selectedApplication.delivery || 'Not specified'}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Contact Info */}
-                  <div className="mb-8">
+                  {/* Available Status Options - NEW SECTION */}
+                  {selectedApplication.service?.status && selectedApplication.service.status.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        Available Status Options
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedApplication.service.status.map((status, idx) => (
+                          <div 
+                            key={status._id || idx} 
+                            className="px-3 py-1 rounded-full text-sm"
+                            style={{ 
+                              backgroundColor: `${status.hexcode}20`,
+                              color: status.hexcode
+                            }}
+                          >
+                            {status.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Provider Info */}
+                  <div className="mb-6">
                     <h3 className="font-medium text-gray-800 mb-3 flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Contact Information
+                      Service Information
                     </h3>
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                       <div className="grid grid-cols-2 divide-x divide-y divide-gray-100">
                         <div className="p-4">
-                          <p className="text-xs text-gray-500 mb-1">Name</p>
-                          <p className="font-medium">{selectedApplication.contactInfo?.name || 'N/A'}</p>
+                          <p className="text-xs text-gray-500 mb-1">Provider</p>
+                          <p className="font-medium">{selectedApplication.provider || 'Not Specified'}</p>
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-gray-500 mb-1">Staff</p>
+                          <p className="font-medium">{selectedApplication.staff || 'Not Assigned'}</p>
                         </div>
                         <div className="p-4">
                           <p className="text-xs text-gray-500 mb-1">Phone</p>
-                          <p className="font-medium">{selectedApplication.contactInfo?.phone || 'N/A'}</p>
+                          <p className="font-medium">{selectedApplication.phone || 'N/A'}</p>
                         </div>
                         <div className="p-4">
-                          <p className="text-xs text-gray-500 mb-1">Email</p>
-                          <p className="font-medium truncate">{selectedApplication.contactInfo?.email || 'N/A'}</p>
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-gray-500 mb-1">City</p>
-                          <p className="font-medium">{selectedApplication.contactInfo?.city || 'N/A'}</p>
+                          <p className="text-xs text-gray-500 mb-1">Documents</p>
+                          <p className="font-medium">{selectedApplication.document?.length || 0} submitted</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Status Tracker - Modern Design */}
-                  <div className="mb-4">
-                    <h3 className="font-medium text-gray-800 mb-4 flex items-center">
+                  {/* Status History (if available) */}
+                  {selectedApplication.statusHistory && selectedApplication.statusHistory.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Status History
+                      </h3>
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-4">
+                        <div className="space-y-3">
+                          {selectedApplication.statusHistory.map((statusItem, idx) => (
+                            <div key={idx} className="flex items-center">
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full mr-2"
+                                style={{ backgroundColor: statusItem.hexcode }}
+                              ></span>
+                              <span className="text-sm font-medium text-gray-700">{statusItem.name}</span>
+                              <span className="text-xs text-gray-500 ml-auto">{formatDate(statusItem.updatedAt)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                 {/* Status Tracker - Modern Design */}
+                 <div className="mb-6">
+                    <h3 className="font-medium text-gray-800 mb-3 flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                       Application Progress
                     </h3>
                     
-                    <div className="relative mt-6">
-                      {/* Progress Line */}
-                      <div className="absolute left-6 top-0 w-1 h-full bg-gray-200 rounded-full z-0"></div>
-                      
-                      {/* Status Steps */}
-                      <div className="relative z-10">
-                        {trackingStages.map((stage, index) => {
-                          const currentIndex = getCurrentStageIndex(selectedApplication.status);
-                          const isCompleted = index <= currentIndex;
-                          const isCurrent = index === currentIndex;
+                    <div className="relative">
+                      {/* Timeline Steps */}
+                      <div className="relative">
+                        {(() => {
+                          const stages = getTrackingStages(selectedApplication);
+                          const currentStageIndex = getCurrentStageIndex(
+                            selectedApplication.currentStatus || selectedApplication.status,
+                            stages
+                          );
                           
-                          return (
-                            <div key={stage.name} className="flex mb-12 last:mb-0">
-                              <div className="relative">
-                                <motion.div 
-                                  className={`w-12 h-12 rounded-full flex items-center justify-center mr-5 border-2 ${
-                                    isCompleted 
-                                      ? 'bg-green-500 text-white border-green-500' 
-                                      : 'bg-white text-gray-400 border-gray-200'
-                                  }`}
-                                  initial={false}
-                                  animate={isCurrent ? { 
-                                    scale: [1, 1.1, 1], 
-                                    boxShadow: ['0px 0px 0px rgba(16, 185, 129, 0)', '0px 0px 15px rgba(16, 185, 129, 0.4)', '0px 0px 0px rgba(16, 185, 129, 0)']
-                                  } : {}}
-                                  transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-                                >
-                                  {isCompleted ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  ) : (
-                                    <span className="font-medium text-lg">{index + 1}</span>
-                                  )}
-                                </motion.div>
-                                
-                                {/* Current indicator - pulsing dot */}
-                                {isCurrent && (
-                                  <motion.div 
-                                    className="absolute -right-1 top-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
-                                    animate={{ 
-                                      scale: [1, 1.5, 1],
-                                      opacity: [1, 0.6, 1]
+                          return stages.map((stage, index) => {
+                            const isCompleted = index <= currentStageIndex;
+                            const isCurrentStage = index === currentStageIndex;
+                            
+                            // Default colors if not provided in stage
+                            const defaultColor = '#10B981';
+                            const stageColor = stage.hexcode || defaultColor;
+                            
+                            return (
+                              <div key={index} className="flex items-start mb-4 last:mb-0">
+                                <div className="flex flex-col items-center mr-4">
+                                  <div 
+                                    className={`w-7 h-7 rounded-full flex items-center justify-center relative ${
+                                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                                    }`}
+                                    style={{ 
+                                      backgroundColor: isCompleted ? stageColor : '#E5E7EB' 
                                     }}
-                                    transition={{ 
-                                      duration: 2,
-                                      repeat: Infinity,
-                                      repeatType: "reverse"
-                                    }}
-                                  />
-                                )}
-                              </div>
-                              
-                              <div className="pt-2">
-                                <div className="flex items-center">
-                                  <h4 className={`font-medium text-lg ${isCompleted ? 'text-green-600' : 'text-gray-500'}`}>
-                                    {stage.name}
-                                  </h4>
+                                  >
+                                    {isCompleted ? (
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    ) : (
+                                      <span className="text-xs text-gray-500">{index + 1}</span>
+                                    )}
+                                    
+                                    {/* Pulsating effect for current stage */}
+                                    {isCurrentStage && (
+                                      <motion.div
+                                        className="absolute inset-0 rounded-full"
+                                        style={{ 
+                                          backgroundColor: stageColor,
+                                          opacity: 0.3 
+                                        }}
+                                        animate={{ scale: [1, 1.2, 1] }}
+                                        transition={{ 
+                                          repeat: Infinity,
+                                          duration: 2,
+                                          ease: "easeInOut"
+                                        }}
+                                      />
+                                    )}
+                                  </div>
                                   
-                                  {isCurrent && (
-                                    <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full uppercase font-bold tracking-wide">
-                                      Current
-                                    </span>
+                                  {/* Connector line */}
+                                  {index < stages.length - 1 && (
+                                    <div 
+                                      className="w-0.5 h-10 rounded"
+                                      style={{ 
+                                        backgroundColor: isCompleted ? stageColor : '#E5E7EB' 
+                                      }}
+                                    ></div>
                                   )}
                                 </div>
                                 
-                                <p className="text-gray-500 text-sm mt-1">{stage.description}</p>
-                                
-                                {isCompleted && index < trackingStages.length - 1 && (
-                                  <p className={`text-xs mt-2 ${index === currentIndex ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
-                                    {index === currentIndex ? 'In progress' : 'Completed'}
+                                <div className="pt-1">
+                                  <h4 className="font-medium text-gray-800">
+                                    {stage.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-500">
+                                    {stage.description}
                                   </p>
-                                )}
+                                  
+                                  {/* If we have a date for this status */}
+                                  {selectedApplication.statusHistory && 
+                                   selectedApplication.statusHistory.find(s => s.name === stage.name) && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      {formatDate(selectedApplication.statusHistory.find(s => s.name === stage.name).updatedAt)}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </div>
-                </div>
+                  
+                  {/* Notes Section (if available) */}
+                  {selectedApplication.notes && selectedApplication.notes.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Notes & Updates
+                      </h3>
+                      <div className="space-y-3">
+                        {selectedApplication.notes.map((note, idx) => (
+                          <div key={idx} className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
+                            <p className="text-gray-600 text-sm">{note.content}</p>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs text-gray-500">{note.createdBy || 'Staff'}</span>
+                              <span className="text-xs text-gray-400">{formatDate(note.createdAt)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* Footer */}
-                <div className="p-4 flex justify-end bg-gray-50 border-t border-gray-100">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                    onClick={closeDetailPopup}
-                  >
-                    Close
-                  </motion.button>
+                  {/* Uploaded Documents (if available) */}
+                  {selectedApplication.document && selectedApplication.document.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-gray-800 mb-3 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Documents Submitted
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {selectedApplication.document.map((doc, idx) => (
+                          <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex items-center">
+                            <div className="p-2 rounded-md bg-blue-100 mr-3">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{doc.name || `Document ${idx + 1}`}</p>
+                              <p className="text-xs text-gray-500">{doc.type || 'Document'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No additional information message */}
+                  {!selectedApplication.notes?.length && 
+                   !selectedApplication.document?.length && 
+                   !selectedApplication.statusHistory?.length && (
+                    <div className="text-center py-8">
+                      <div className="bg-gray-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h4 className="text-gray-700 font-medium">No additional information</h4>
+                      <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
+                        No detailed history or additional information is available for this application at this time.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Footer - Contact Section */}
+                <div className="border-t border-gray-100 p-6 bg-gray-50">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500 mb-2">
+                      Need help with this application?
+                    </p>
+                    <div className="flex justify-center space-x-3">
+                      <a href="tel:+918976541234" className="flex items-center text-sm text-green-600 hover:text-green-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        Call support
+                      </a>
+                      <a href="mailto:support@dokumentguru.com" className="flex items-center text-sm text-green-600 hover:text-green-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Email us
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Decorative elements */}
-        <div className="relative">
-          <motion.div 
-            className="absolute -bottom-10 -left-10 w-20 h-20 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 opacity-70 blur-xl"
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.5, 0.8, 0.5]
-            }}
-            transition={{ 
-              duration: 8,
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
-          />
-          <motion.div 
-            className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-gradient-to-r from-emerald-100 to-green-200 opacity-70 blur-xl"
-            animate={{ 
-              scale: [1, 1.1, 1],
-              x: [0, 10, 0],
-              opacity: [0.5, 0.7, 0.5]
-            }}
-            transition={{ 
-              duration: 10,
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
-          />
-        </div>
         
         {/* Footer */}
-        <div className="mt-8 text-center text-gray-500 text-sm">
-          <p>Need help? Contact our support team at support@dokumentguru.com</p>
+        <div className="text-center text-gray-500 text-xs mt-10">
+          <p>&copy; 2023 DokumentGuru. All rights reserved.</p>
         </div>
       </motion.div>
     </div>
