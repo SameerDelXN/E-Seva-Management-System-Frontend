@@ -233,7 +233,7 @@ export default function StaffManagerDashboard() {
   // Update staff assignment
   const updateAssignment = async (applicationId, staffName) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/update`, {
+      const response = await fetch(`${API_BASE_URL}/update/${applicationId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
