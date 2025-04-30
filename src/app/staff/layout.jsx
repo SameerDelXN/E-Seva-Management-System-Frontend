@@ -17,7 +17,7 @@ const StaffLayout = ({children}) => {
   
   // Check if user is authenticated and has staff role
   useEffect(() => {
-    if (!loading && (!session || session.role !== 'staff')) {
+    if (!loading && (!session)) {
       router.push('/auth/signin')
     }
   }, [session, loading, router])
@@ -51,7 +51,7 @@ const StaffLayout = ({children}) => {
     setIsMobileSidebarOpen(!isMobileSidebarOpen);
   };
 
-  if (loading || !session || session.role !== 'staff') {
+  if (loading || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner description="Verifying Your Access" />

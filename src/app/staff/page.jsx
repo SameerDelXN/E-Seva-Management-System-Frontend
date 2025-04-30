@@ -2,20 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { FiRefreshCw, FiUpload, FiFile, FiCheckCircle, FiClock, FiUserCheck, FiEdit, FiSave, FiX } from 'react-icons/fi';
-
+import { useSession } from '@/context/SessionContext';
 export default function StaffDashboard() {
+  const {session} = useSession()
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name)
   
   // Add state for editing application status
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [editingStatus, setEditingStatus] = useState("");
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
-
+  console.log("sess",session)
   // Stats counters for dashboard
   const [stats, setStats] = useState({
     total: 0,
@@ -34,23 +36,25 @@ export default function StaffDashboard() {
       }
       
       const data = await response.json();
-      
-      // Filter applications assigned to current staff ("You")
-      // In a real app, you'd use authenticated user data
-      setApplications(data);
+      console.log("data ",data  )
+      // Filter applications assigned to current staff
+      const filteredApplications = data.filter(app => app.staff === session?.user?.name);
+      console.log("filter ,",filteredApplications)
+      setApplications(filteredApplications);
       
       // Calculate stats
-      const pendingApps = data.filter(app => app.status !== "Completed").length;
-      const completedApps = data.filter(app => app.status === "Completed").length;
+      const pendingApps = filteredApplications.filter(app => app.status !== "Completed").length;
+      const completedApps = filteredApplications.filter(app => app.status === "Completed").length;
       
       setStats({
-        total: data.length,
+        total: filteredApplications.length,
         pending: pendingApps,
         completed: completedApps
       });
       
     } catch (err) {
       console.error("Error fetching applications:", err);
+      setError("Failed to load applications");
     } finally {
       setLoading(false);
     }
