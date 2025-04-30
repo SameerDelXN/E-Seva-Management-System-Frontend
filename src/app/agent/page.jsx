@@ -95,7 +95,7 @@ export default function ServiceGroupsUI() {
       });
     }
   };
-
+  console.log("naisji",serviceGroups)
   // Get price based on agent's plan
   const getPriceForAgentPlan = (service) => {
     // Find pricing for agent's location

@@ -828,11 +828,12 @@ const App = () => {
       price: serviceData.price || 0,
       planPrices: serviceData.planPrices && Array.isArray(serviceData.planPrices) 
         ? serviceData.planPrices.map(planPrice => ({
-            locationId: planPrice.location,
+            location: planPrice.location,
             state:planPrice.state,
             district:planPrice.district,
             plans: planPrice.plans && Array.isArray(planPrice.plans) 
               ? planPrice.plans.map(p => ({
+
                   plan: p.plan,
                   planName:p.planName,
                   price: serviceData.price
