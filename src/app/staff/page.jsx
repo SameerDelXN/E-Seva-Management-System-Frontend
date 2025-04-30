@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FiRefreshCw, FiUpload, FiFile, FiCheckCircle, FiClock, FiUserCheck, FiEdit, FiSave, FiX } from 'react-icons/fi';
+import { FiRefreshCw, FiUpload, FiFile,FiList, FiCheckCircle, FiClock, FiUserCheck, FiEdit, FiSave, FiX } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
 export default function StaffDashboard() {
   const {session} = useSession()
@@ -11,12 +11,15 @@ export default function StaffDashboard() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name)
-  
+  const [combinedStatusOptions, setCombinedStatusOptions] = useState([]);
+  const [showReasonField, setShowReasonField] = useState(false);
   // Add state for editing application status
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [editingStatus, setEditingStatus] = useState("");
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
+  const globalStatusOptions = [
+  ];
   console.log("sess",session)
   // Stats counters for dashboard
   const [stats, setStats] = useState({
@@ -61,14 +64,82 @@ export default function StaffDashboard() {
   };
   console.log("my =",applications)
   // Update application status
-  const updateStatus = async (id, newStatus) => {
+  // const updateStatus = async (id, newStatus) => {
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/update`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ _id: id, status: newStatus }),
+  //     });
+      
+  //     if (!response.ok) {
+  //       throw new Error(`Failed to update status: ${response.status}`);
+  //     }
+      
+  //     const updatedApplication = await response.json();
+  //     setApplications(applications.map(app => 
+  //       app._id === id ? updatedApplication : app
+  //     ));
+      
+  //     // Reset editing state
+  //     setEditingStatusId(null);
+  //     setEditingStatus("");
+      
+  //   } catch (err) {
+  //     console.error("Error updating status:", err);
+  //     alert("Failed to update status. Please try again.");
+  //   }
+  // };
+  const updateStatus = async (id, newStatus, reason = "") => {
     try {
-      const response = await fetch(`${API_BASE_URL}/update`, {
+      // Find the status option details from combined status options
+      const statusDetails = combinedStatusOptions.find(option => option.name === newStatus);
+      if (!statusDetails) {
+        throw new Error("Invalid status selected");
+      }
+      
+      // Find current application to add to history
+      const currentApp = applications.find(app => app._id === id);
+      if (!currentApp) {
+        throw new Error("Application not found");
+      }
+      
+      // Prepare current status for history
+      const currentStatusEntry = {
+        name: currentApp.currentStatus?.name || currentApp.status || "Initiated",
+        hexcode: currentApp.currentStatus?.hexcode || "#A78BFA",
+        reason: currentApp.currentStatus?.reason || "",
+        updatedAt: new Date(),
+        updatedBy: "Admin" // Should be replaced with actual logged-in user
+      };
+      
+      // Create new status object
+      const newCurrentStatus = {
+        name: newStatus,
+        hexcode: statusDetails.hexcode,
+        askreason: statusDetails.askreason,
+        reason: reason,
+        updatedAt: new Date()
+      };
+      
+      // Prepare update payload
+      const updatePayload = {
+        _id: id,
+        status: newStatus, // Update legacy status field
+        currentStatus: newCurrentStatus,
+        $push: { 
+          statusHistory: currentStatusEntry
+        }
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/update/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ _id: id, status: newStatus }),
+        body: JSON.stringify(updatePayload),
       });
       
       if (!response.ok) {
@@ -76,6 +147,8 @@ export default function StaffDashboard() {
       }
       
       const updatedApplication = await response.json();
+      
+      // Update local state
       setApplications(applications.map(app => 
         app._id === id ? updatedApplication : app
       ));
@@ -83,6 +156,9 @@ export default function StaffDashboard() {
       // Reset editing state
       setEditingStatusId(null);
       setEditingStatus("");
+      setStatusReason("");
+      setShowReasonField(false);
+      setCombinedStatusOptions([]);
       
     } catch (err) {
       console.error("Error updating status:", err);
@@ -129,11 +205,55 @@ export default function StaffDashboard() {
     }
   };
 
-  // Handle edit status mode
-  const startEditStatus = (application) => {
-    setEditingStatusId(application._id);
-    setEditingStatus(application.status);
+  const getServiceStatusOptions = (application) => {
+    if (!application.service || !application.service.status || !Array.isArray(application.service.status)) {
+      return [];
+    }
+    
+    return application.service.status.map(status => ({
+      name: status.name,
+      hexcode: status.hexcode,
+      askreason: status.askreason || false
+    }));
   };
+  const getCurrentStatus = (application) => {
+    // Always use currentStatus.name if available, otherwise fall back to status
+    return application.currentStatus?.name || application.status || "Initiated";
+  };
+
+  // Handle edit status mode
+  // const startEditStatus = (application) => {
+  //   console.log(application);
+  //   setEditingStatusId(application._id);
+  //   setEditingStatus(application.status);
+  // };
+
+  const startEditStatus = (application) => {
+    // Always use currentStatus if available, otherwise fall back to status
+    const currentStatusName = application.currentStatus?.name || application.status || "Initiated";
+    
+    // Get service-specific status options
+    const serviceStatusOptions = getServiceStatusOptions(application);
+    
+    // Combine global and service-specific status options
+    // Avoid duplicates by checking names
+    const allStatusOptions = [...globalStatusOptions];
+    
+    serviceStatusOptions.forEach(serviceStatus => {
+      if (!allStatusOptions.some(option => option.name === serviceStatus.name)) {
+        allStatusOptions.push(serviceStatus);
+      }
+    });
+    
+    setCombinedStatusOptions(allStatusOptions);
+    setEditingStatusId(application._id);
+    setEditingStatus(currentStatusName);
+    
+    // Check if this status requires a reason
+    const statusOption = allStatusOptions.find(option => option.name === currentStatusName);
+    setShowReasonField(statusOption?.askreason || false);
+  };
+
 
   const cancelEditStatus = () => {
     setEditingStatusId(null);
@@ -246,7 +366,7 @@ export default function StaffDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          {/* <td className="px-6 py-4 whitespace-nowrap">
                             {editingStatusId === application._id ? (
                               <div className="flex items-center space-x-2">
                                 <select
@@ -285,7 +405,68 @@ export default function StaffDashboard() {
                                 </button>
                               </div>
                             )}
-                          </td>
+                          </td> */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                                                      {editingStatusId === application._id ? (
+                                                        <div className="flex flex-col space-y-2">
+                                                          <div className="flex items-center space-x-2">
+                                                            <select
+                                                              value={editingStatus}
+                                                              onChange={handleStatusChange}
+                                                              className="text-xs border border-gray-300 rounded p-1"
+                                                            >
+                                                              {combinedStatusOptions.map(option => (
+                                                                <option key={option.name} value={option.name}>
+                                                                  {option.name}
+                                                                </option>
+                                                              ))}
+                                                            </select>
+                                                            <button 
+                                                              onClick={() => saveStatus(application._id)}
+                                                              className="text-green-600 hover:text-green-900"
+                                                            >
+                                                              <FiSave className="h-4 w-4" />
+                                                            </button>
+                                                            <button 
+                                                              onClick={cancelEditStatus}
+                                                              className="text-red-600 hover:text-red-900"
+                                                            >
+                                                              <FiX className="h-4 w-4" />
+                                                            </button>
+                                                          </div>
+                                                          
+                                                          {showReasonField && (
+                                                            <input
+                                                              type="text"
+                                                              placeholder="Enter reason"
+                                                              value={statusReason}
+                                                              onChange={(e) => setStatusReason(e.target.value)}
+                                                              className="text-xs border border-gray-300 rounded p-1 w-full"
+                                                            />
+                                                          )}
+                                                        </div>
+                                                      ) : (
+                                                        <div className="flex items-center space-x-2">
+                                                          <StatusBadge status={getCurrentStatus(application)} hexcode={application.currentStatus?.hexcode} />
+                                                          <button 
+                                                            onClick={() => startEditStatus(application)}
+                                                            className="text-indigo-600 hover:text-indigo-900"
+                                                            title="Edit Status"
+                                                          >
+                                                            <FiEdit className="h-4 w-4" />
+                                                          </button>
+                                                          {(application.statusHistory?.length > 0 || application.currentStatus) && (
+                                                            <button
+                                                              onClick={() => handleViewStatusHistory(application)}
+                                                              className="text-gray-600 hover:text-gray-900"
+                                                              title="View Status History"
+                                                            >
+                                                              <FiList className="h-4 w-4" />
+                                                            </button>
+                                                          )}
+                                                        </div>
+                                                      )}
+                                                    </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
   {typeof application.service === 'object' 
     ? application.service.name || JSON.stringify(application.service) 
