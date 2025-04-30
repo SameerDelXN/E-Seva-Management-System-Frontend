@@ -21,14 +21,12 @@ export default function StaffManagerDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatusHistoryModalOpen, setIsStatusHistoryModalOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
-  const [staffMembers] = useState([
-    { id: 1, name: "John Doe", status: "Available" },
-    { id: 2, name: "Sarah Smith", status: "Busy" },
-    { id: 3, name: "Meera Shah", status: "Available" },
-    { id: 4, name: "Alex Johnson", status: "Available" }
-  ]);
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [filteredStaffMembers, setFilteredStaffMembers] = useState([]);
+  const [staffLoading, setStaffLoading] = useState(false);
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
+  const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
   // Global status options with color codes
   const globalStatusOptions = [
@@ -82,6 +80,79 @@ export default function StaffManagerDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch all staff members
+  const fetchStaffMembers = async () => {
+    try {
+      setStaffLoading(true);
+      const response = await fetch(STAFF_API_URL);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch staff members: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // Assuming the response structure contains a data array with staff members
+      if (data && data.data && Array.isArray(data.data)) {
+        setStaffMembers(data.data.map(staff => ({
+          id: staff._id,
+          name: staff.name,
+          username: staff.username,
+          contactNo: staff.contactNo,
+          location: staff.location,
+          serviceGroups: staff.serviceGroups || [],
+          // Add a default status (this could be replaced with actual staff availability data)
+          status: "Available"
+        })));
+      } else {
+        throw new Error("Invalid staff data format");
+      }
+    } catch (err) {
+      console.error("Error fetching staff members:", err);
+      // Fallback to dummy data if API fails
+      setStaffMembers([
+        { id: 1, name: "John Doe", status: "Available", serviceGroups: [] },
+        { id: 2, name: "Sarah Smith", status: "Busy", serviceGroups: [] },
+        { id: 3, name: "Meera Shah", status: "Available", serviceGroups: [] },
+        { id: 4, name: "Alex Johnson", status: "Available", serviceGroups: [] }
+      ]);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
+
+  // Filter staff based on application service
+  const filterStaffForApplication = (application) => {
+    if (!application || !application.service) {
+      return staffMembers; // Return all staff if no service specified
+    }
+
+    // Get the service name from the application
+    let serviceName;
+    if (typeof application.service === 'object') {
+      serviceName = application.service.name;
+    } else {
+      serviceName = application.service;
+    }
+
+    if (!serviceName) {
+      return staffMembers; // Return all staff if service name is not available
+    }
+
+    // Filter staff who can provide this service
+    const filtered = staffMembers.filter(staff => {
+      if (!staff.serviceGroups || !Array.isArray(staff.serviceGroups)) {
+        return false;
+      }
+      
+      return staff.serviceGroups.some(group => 
+        group.serviceName === serviceName || 
+        group.serviceName === serviceName.trim()
+      );
+    });
+
+    return filtered.length > 0 ? filtered : staffMembers; // Fallback to all staff if no matches
   };
 
   // Update application status
@@ -190,6 +261,8 @@ export default function StaffManagerDashboard() {
 
   const handleAssignStaff = (application) => {
     setSelectedApplication(application);
+    // Filter staff members based on the application's service
+    setFilteredStaffMembers(filterStaffForApplication(application));
     setIsModalOpen(true);
   };
 
@@ -260,9 +333,10 @@ export default function StaffManagerDashboard() {
     updateStatus(id, editingStatus, statusReason);
   };
 
-  // Load applications on component mount
+  // Load applications and staff members on component mount
   useEffect(() => {
     fetchApplications();
+    fetchStaffMembers();
   }, []);
   
   // Helper function to get current status of an application
@@ -514,26 +588,55 @@ export default function StaffManagerDashboard() {
         {isModalOpen && selectedApplication && (
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Assign Staff to Application #{selectedApplication._id}
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Assign Staff to Application
               </h3>
+              
+              {/* Display application service information */}
+              <div className="mb-4 bg-blue-50 p-3 rounded">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">Service Required:</span> {
+                    typeof selectedApplication.service === 'object' 
+                      ? selectedApplication.service.name 
+                      : selectedApplication.service
+                  }
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Showing staff members who can provide this service
+                </p>
+              </div>
+              
               <div className="space-y-3">
-                {staffMembers.map(staff => (
-                  <button
-                    key={staff.id}
-                    onClick={() => updateAssignment(selectedApplication._id, staff.name)}
-                    className={`w-full flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 
-                      ${selectedApplication.staff === staff.name ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}
-                  >
-                    <div className="flex items-center">
-                      <FiUser className="h-5 w-5 text-gray-500 mr-3" />
-                      <span className="font-medium text-gray-900">{staff.name}</span>
-                    </div>
-                    <span className={`text-sm ${staff.status === 'Available' ? 'text-green-600' : 'text-red-600'}`}>
-                      {staff.status}
-                    </span>
-                  </button>
-                ))}
+                {staffLoading ? (
+                  <div className="text-center py-4">
+                    <FiRefreshCw className="animate-spin h-5 w-5 mx-auto text-gray-500" />
+                    <p className="mt-2 text-sm text-gray-500">Loading staff members...</p>
+                  </div>
+                ) : filteredStaffMembers.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    No staff members available for this service
+                  </div>
+                ) : (
+                  filteredStaffMembers.map(staff => (
+                    <button
+                      key={staff.id}
+                      onClick={() => updateAssignment(selectedApplication._id, staff.name)}
+                      className={`w-full flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 
+                        ${selectedApplication.staff === staff.name ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}
+                    >
+                      <div className="flex items-center">
+                        <FiUser className="h-5 w-5 text-gray-500 mr-3" />
+                        <div>
+                          <span className="font-medium text-gray-900">{staff.name}</span>
+                          <p className="text-xs text-gray-500">Location: {staff.location}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm ${staff.status === 'Available' ? 'text-green-600' : 'text-red-600'}`}>
+                        {staff.status}
+                      </span>
+                    </button>
+                  ))
+                )}
               </div>
               <div className="mt-6 flex justify-end">
                 <button
@@ -618,19 +721,10 @@ export default function StaffManagerDashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-500 text-center py-4">
+                  <div className="text-center py-4 text-gray-500">
                     No status history available
                   </div>
                 )}
-              </div>
-              
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setIsStatusHistoryModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
@@ -640,20 +734,22 @@ export default function StaffManagerDashboard() {
   );
 }
 
-// Stat Card Component
+// StatCard component for dashboard metrics
 function StatCard({ title, value, icon, color }) {
   return (
-    <div className={`${color} overflow-hidden rounded-lg shadow`}>
-      <div className="p-5">
+    <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div className="px-4 py-5 sm:p-6">
         <div className="flex items-center">
-          <div className="flex-shrink-0">
+          <div className={`flex-shrink-0 rounded-md p-3 ${color}`}>
             {icon}
           </div>
           <div className="ml-5 w-0 flex-1">
-            <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-            <dd className="flex items-baseline">
-              <div className="text-2xl font-semibold text-gray-900">{value}</div>
-            </dd>
+            <dl>
+              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
+              <dd>
+                <div className="text-lg font-medium text-gray-900">{value}</div>
+              </dd>
+            </dl>
           </div>
         </div>
       </div>
@@ -661,96 +757,46 @@ function StatCard({ title, value, icon, color }) {
   );
 }
 
-// Status Badge Component
-function StatusBadge({ status, hexcode }) {
-  // Use provided hexcode if available, otherwise determine color based on status name
-  let color = "bg-gray-100 text-gray-800";
+// StatusBadge component for displaying application status
+function StatusBadge({ status, hexcode = null }) {
+  // Default color mapping if no hexcode is provided
+  const defaultColors = {
+    "Initiated": "#A78BFA", // Purple
+    "In Progress": "#F59E0B", // Yellow
+    "Completed": "#10B981", // Green
+    "Rejected": "#EF4444", // Red
+    "On Hold": "#6B7280", // Gray
+    "Pending": "#3B82F6", // Blue
+    "Cancelled": "#1F2937" // Dark Gray
+  };
+
+  // Use provided hexcode or get from default colors or use purple as fallback
+  const colorHex = hexcode || defaultColors[status] || "#A78BFA";
   
-  if (hexcode) {
-    // Convert hexcode to tailwind-compatible classes
-    // This is a simplified version - in a real app, you might use a proper color mapping system
-    switch (hexcode.toLowerCase()) {
-      case "#10b981": // green
-        color = "bg-green-100 text-green-800";
-        break;
-      case "#3b82f6": // blue
-        color = "bg-blue-100 text-blue-800";
-        break;
-      case "#ef4444": // red
-        color = "bg-red-100 text-red-800";
-        break;
-      case "#f59e0b": // yellow
-        color = "bg-yellow-100 text-yellow-800";
-        break;
-      case "#a78bfa": // purple
-        color = "bg-purple-100 text-purple-800";
-        break;
-      case "#6366f1": // indigo
-        color = "bg-indigo-100 text-indigo-800";
-        break;
-      case "#4caf50": // green (from service status)
-        color = "bg-green-100 text-green-800";
-        break;
-      case "#d2b319": // yellow/amber (from service status)
-        color = "bg-yellow-100 text-yellow-800";
-        break;
-      case "#5f6ab9": // blue/indigo (from service status)
-        color = "bg-indigo-100 text-indigo-800";
-        break;
-      default:
-        // Map status names to colors as a fallback
-        switch (status) {
-          case "Completed":
-            color = "bg-green-100 text-green-800";
-            break;
-          case "In Progress":
-            color = "bg-blue-100 text-blue-800";
-            break;
-          case "Rejected":
-            color = "bg-red-100 text-red-800";
-            break;
-          case "HSM Authentication":
-            color = "bg-yellow-100 text-yellow-800";
-            break;
-          case "Initiated":
-            color = "bg-purple-100 text-purple-800";
-            break;
-          case "In Pursuit":
-            color = "bg-indigo-100 text-indigo-800";
-            break;
-          default:
-            color = "bg-gray-100 text-gray-800";
-        }
-    }
-  } else {
-    // Fallback to status-based colors
-    switch (status) {
-      case "Completed":
-        color = "bg-green-100 text-green-800";
-        break;
-      case "In Progress":
-        color = "bg-blue-100 text-blue-800";
-        break;
-      case "Rejected":
-        color = "bg-red-100 text-red-800";
-        break;
-      case "HSM Authentication":
-        color = "bg-yellow-100 text-yellow-800";
-        break;
-      case "Initiated":
-        color = "bg-purple-100 text-purple-800";
-        break;
-      case "In Pursuit":
-        color = "bg-indigo-100 text-indigo-800";
-        break;
-      default:
-        color = "bg-gray-100 text-gray-800";
-    }
-  }
+  // Calculate text color based on background brightness
+  // Simple approach: for dark backgrounds use white text, for light backgrounds use dark text
+  const isLightColor = (hexColor) => {
+    // Convert hex to RGB
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    
+    // Calculate brightness according to YIQ formula
+    return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128;
+  };
+  
+  const textColor = isLightColor(colorHex) ? '#1F2937' : '#FFFFFF';
   
   return (
-    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
-      {status || "Unknown"}
+    <span 
+      className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+      style={{ 
+        backgroundColor: colorHex,
+        color: textColor
+      }}
+    >
+      {status}
     </span>
   );
 }

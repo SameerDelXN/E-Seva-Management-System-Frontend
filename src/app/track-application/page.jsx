@@ -37,7 +37,7 @@ export default function TrackApplication() {
 
     try {
       // Call the API to fetch applications based on mobile number
-      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/application/fetchAll?phone=${mobileNumber}`);
+      const response = await fetch(`http://localhost:3001/api/application/fetchAll?phone=${mobileNumber}`);
       const result = await response.json();
       console.log(result);
       if (response.ok) {
