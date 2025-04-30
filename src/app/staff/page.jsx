@@ -13,6 +13,7 @@ export default function StaffDashboard() {
   const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name)
   const [combinedStatusOptions, setCombinedStatusOptions] = useState([]);
   const [showReasonField, setShowReasonField] = useState(false);
+  const [statusReason, setStatusReason] = useState("");
   // Add state for editing application status
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [editingStatus, setEditingStatus] = useState("");
@@ -142,9 +143,9 @@ export default function StaffDashboard() {
         body: JSON.stringify(updatePayload),
       });
       
-      if (!response.ok) {
-        throw new Error(`Failed to update status: ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   throw new Error(`Failed to update status: ${response.status}`);
+      // }
       
       const updatedApplication = await response.json();
       
@@ -349,7 +350,7 @@ export default function StaffDashboard() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      {/* <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -491,7 +492,7 @@ export default function StaffDashboard() {
                               status={application.status}
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                          {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                             <div className="flex justify-center">
                               {application.status !== "Completed" && (
                                 <button 
@@ -510,7 +511,7 @@ export default function StaffDashboard() {
                                 </button>
                               )}
                             </div>
-                          </td>
+                          </td> */}
                         </tr>
                       ))
                     )}

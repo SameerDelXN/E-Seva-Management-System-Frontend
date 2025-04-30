@@ -432,7 +432,7 @@ export default function StaffManagerDashboard() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      {/* <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -534,7 +534,7 @@ export default function StaffManagerDashboard() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          {/* <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <div className="flex justify-center space-x-2">
                               {getCurrentStatus(application) !== "Completed" && (
                                 <button 
@@ -573,7 +573,7 @@ export default function StaffManagerDashboard() {
                                 </button>
                               )}
                             </div>
-                          </td>
+                          </td> */}
                         </tr>
                       ))
                     )}
