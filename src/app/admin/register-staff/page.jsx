@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Formik, Form, Field, ErrorMessage as FormikErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { FiUser, FiMail, FiPhone, FiHome, FiAlertCircle,FiCalendar, FiTruck, FiCreditCard, FiLock, FiUpload, FiChevronDown, FiShoppingBag, FiKey, FiEdit2, FiTrash2, FiPlus, FiSearch, FiDollarSign, FiBook, FiEdit, FiStar, FiZap, FiGlobe, FiShield, FiMapPin, FiFileText, FiEye,FiX,FiSave,FiLoader } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiHome, FiCheck, FiAlertCircle,FiCalendar, FiTruck, FiCreditCard, FiLock, FiUpload, FiChevronDown, FiShoppingBag, FiKey, FiEdit2, FiTrash2, FiPlus, FiSearch, FiDollarSign, FiBook, FiEdit, FiStar, FiZap, FiGlobe, FiShield, FiMapPin, FiFileText, FiEye,FiX,FiSave,FiLoader } from 'react-icons/fi';
 // Import popup components
 import AddSuccessPopup from '@/components/popups/addSucess';
 import DeleteSuccessPopup from '@/components/popups/deleteSuccess';
@@ -19,6 +19,9 @@ const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  // Add this with your other state declarations
+const [showServicesModal, setShowServicesModal] = useState(false);
+const [selectedStaffServices, setSelectedStaffServices] = useState([]);
   const staffsPerPage = 10;
   
   // Popup states
@@ -71,6 +74,45 @@ const StaffManagement = () => {
         return [];
     }
 };
+const ServicesModal = ({ services, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Services</h3>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FiX className="h-6 w-6" />
+          </button>
+        </div>
+        
+        <div className="space-y-2">
+          {services.length > 0 ? (
+            services.map((service, index) => (
+              <div key={index} className="flex items-center bg-gray-50 p-3 rounded">
+                <FiCheck className="text-green-500 mr-2" />
+                <span className="text-gray-700">{service.serviceName}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">No services assigned</p>
+          )}
+        </div>
+        
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
   // Form validation schema
   const validationSchema = Yup.object().shape({
     name: Yup.string()
@@ -122,27 +164,6 @@ const StaffManagement = () => {
     const loadStaffData = async () => {
       setIsLoading(true);
      
-    
-      // const fetchStaffManager = async () => {
-      //   try {
-      //     const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/staff-manager/fetch-manager",{
-      //       method:'GET'
-      //     });
-          
-      //     if (!response.ok) {
-      //       console.log("Failed to fetch agents. Status:", response.status);
-      //       return;
-      //     }
-      //     const data = await response.json();  // ✅ Parse JSON
-      //   console.log("Fetched Staff Managers:", data.managers);
-      //   return data.managers;
-      //     // const data = await response.json();
-      //     // setAgents(data.data); // Store fetched data in state
-      //   } catch (error) {
-      //     console.error("Error fetching agents:", error.message);
-      //   }
-      // };
-
        const newdata= await fetchStaffs();
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -194,7 +215,7 @@ const StaffManagement = () => {
         url = 'https://dokument-guru-backend.vercel.app/api/admin/staff/add-staff';
         method = 'POST';
       }
-  
+ 
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -235,6 +256,8 @@ const StaffManagement = () => {
     }
   };
 
+
+  
   // Delete a staff member
   const handleDeleteStaff = async(id) => {
     setStaffToDelete(id);
@@ -300,16 +323,17 @@ const StaffManagement = () => {
       'ABHIMEX': 0
     };
   
-    staffData.forEach(staff => {
-      // Split the ServiceGroup string into individual services
-      const services = staff.ServiceGroup.split(',').map(s => s.trim());
+     console.log(staffData);
+    // staffData?.forEach(staff => {
+    //   // Split the ServiceGroup string into individual services
+    //   const services = staff.serviceGroups.split(',').map(s => s.trim());
       
-      services.forEach(service => {
-        if (serviceCounts.hasOwnProperty(service)) {
-          serviceCounts[service]++;
-        }
-      });
-    });
+    //   services.forEach(service => {
+    //     if (serviceCounts.hasOwnProperty(service)) {
+    //       serviceCounts[service]++;
+    //     }
+    //   });
+    // });
   
     return serviceCounts;
   };
@@ -320,211 +344,443 @@ const StaffManagement = () => {
   const totalPages = Math.ceil(filteredStaffs.length / staffsPerPage);
 
   // Add/Edit staff form component
-  const StaffForm = () => {
-    const initialValues = editingStaff || {
-      name: '',
-      username: '',
-      password: '',
-      contactNo: '',
-      location: '',
-      ServiceGroup: ''
+
+ const refetchStaffData = async () => {
+    setIsLoading(true);
+    const newData = await fetchStaffs();
+    setStaffs(newData);
+    setIsLoading(false);
+  };
+
+const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  }) => {
+  const [serviceGroups, setServiceGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch service groups on component mount
+  useEffect(() => {
+    const fetchServiceGroups = async () => {
+      try {
+        const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/getAll-Groups');
+        const data = await response.json();
+        if (data && data.serviceGroups) {
+          setServiceGroups(data.serviceGroups);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching service groups:', error);
+        setIsLoading(false);
+      }
     };
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12 px-4 sm:px-6 lg:px-8 w-full">
-  <div className="max-w-4xl mx-auto">
-    <div className="text-center mb-10">
-      <h2 className="text-3xl font-bold text-gray-800 mb-2">
-        {editingStaff ? 'Edit Staff Member' : 'Staff Registration'}
-      </h2>
-      <p className="text-gray-600 max-w-md mx-auto">
-        {editingStaff ? 'Update staff details below' : 'Complete the form below to register as an authorized staff'}
-      </p>
-    </div>
-  </div>
+    fetchServiceGroups();
+  }, []);
 
-  <Formik
-    initialValues={initialValues}
-    validationSchema={validationSchema}
-    onSubmit={handleSubmit}
-    enableReinitialize
-  >
-    {({ isSubmitting, values }) => (
-      <Form className="space-y-6">
-        <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 p-6">
-          {/* Personal Information Section */}
-          <div className="mb-8">
-            <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <FiUser className="text-green-600 text-xl" />
-              </div>
-              <h2 className="ml-4 text-xl font-semibold text-gray-800">
-                Personal Information
-              </h2>
-            </div>
+  // Initialize selected services when editing
+  useEffect(() => {
+    if (editingStaff && editingStaff.serviceGroups) {
+      setSelectedServices(editingStaff.serviceGroups);
+    }
+  }, [editingStaff]);
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                <Field
-                  name="name"
-                  type="text"
-                  className={`w-full px-4 py-3 border ${values.name ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                  placeholder="John Doe"
-                />
-                <FormikErrorMessage name="name" component={ErrorMessage} />
-              </div>
+  // Form validation schema
+  const validationSchema = Yup.object({
+    name: Yup.string().required('Name is required'),
+    username: Yup.string().required('Username is required'),
+    password: Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),
+    contactNo: Yup.string().required('Contact number is required').matches(/^\d{10}$/, 'Phone number must be 10 digits'),
+    location: Yup.string().required('Location is required'),
+    serviceGroups: Yup.array().min(1, 'Select at least one service'),
+    selectedServiceGroup: Yup.string()
+  });
 
-              {/* Contact Number */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                <Field
-                  name="contactNo"
-                  type="tel"
-                  className={`w-full px-4 py-3 border ${values.contactNo ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                  placeholder="9876543210"
-                  maxLength="10"
-                  onKeyPress={(e) => {
-                    if (!/[0-9]/.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                />
-                <FormikErrorMessage name="contactNo" component={ErrorMessage} />
-              </div>
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      // Combine the form values with the selected services
+      const submissionData = {
+        ...values,
+        serviceGroups: selectedServices
+      };
+      
+      console.log("data", submissionData);
+      
+      // API call to save or update staff
+      const url = editingStaff 
+        ? `https://dokument-guru-backend.vercel.app/api/admin/staff/update/${editingStaff._id}` 
+        : 'https://dokument-guru-backend.vercel.app/api/admin/staff/add-staff';
+        
+      const response = await fetch(url, {
+        method: editingStaff ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData),
+      });
 
-              {/* City */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">location *</label>
-                <div className="relative">
-                  <Field
-                    as="select"
-                    name="location"
-                    className={`w-full px-4 py-3 border ${values.location ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
-                  >
-                    <option value="">Select a location</option>
-                    <option value="Pune">Pune</option>
-                    <option value="Mumbai">Mumbai</option>
-                    <option value="AhilyaNagar">AhilyaNagar</option>
-                    <option value="SambhajiNagar">SambhajiNagar</option>
-                    <option value="Delhi">Delhi</option>
-                  </Field>
-                  <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
-                </div>
-                <FormikErrorMessage name="location" component={ErrorMessage} />
-              </div>
+      const data = await response.json();
+      console.log("asdf",data)
+      if (data.message=="success") {
 
-              {/* Services */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Services *</label>
-                <div className="relative">
-                  <Field
-                    as="select"
-                    name="ServiceGroup"
-                    className={`w-full px-4 py-3 border ${values.ServiceGroup ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
-                  >
-                    <option value="">Select services</option>
-                    <option value="E-Seva Kendra">E-Seva Kendra</option>
-                    <option value="RTO Services">RTO Services</option>
-                    <option value="CA Services">CA Services</option>
-                    <option value="Legal Services">Legal Services</option>
-                    <option value="Quick Services">Quick Services</option>
-                    <option value="Banking Services">Banking Services</option>
-                    <option value="Maha E-Seva Kendra">Maha E-Seva Kendra</option>
-                    <option value="DocumentGuru Membership">DocumentGuru Membership</option>
-                    <option value="ABIMEX">ABIMEX</option>
-                    <option value="Multiple Services">Multiple Services</option>
-                  </Field>
-                  <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
-                </div>
-                <FormikErrorMessage name="ServiceGroup" component={ErrorMessage} />
-              </div>
-            </div>
-          </div>
-
-          {/* Login Information Section */}
-          <div className="mb-8">
-            <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <FiKey className="text-green-600 text-xl" />
-              </div>
-              <h2 className="ml-4 text-xl font-semibold text-gray-800">
-                Login Information
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username *</label>
-                <Field
-                  name="username"
-                  type="text"
-                  className={`w-full px-4 py-3 border ${values.username ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                  placeholder="johndoe123"
-                />
-                <FormikErrorMessage name="username" component={ErrorMessage} />
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-                <div className="relative">
-                  <Field
-                    name="password"
-                    type="password"
-                    className={`w-full px-4 py-3 border ${values.password ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                    placeholder="••••••••"
-                  />
-                  <button type="button" className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600">
-                  </button>
-                </div>
-                <FormikErrorMessage name="password" component={ErrorMessage} />
-              </div>
-            </div>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setEditingStaff(null);
-              }}
-              className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 flex items-center transition-colors duration-200"
-            >
-              <FiX className="mr-2" />
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-5 py-2.5 rounded-lg shadow-sm text-white flex items-center transition-colors duration-200 ${
-                isSubmitting ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
-            >
-              {isSubmitting ? (
-                <>
-                  <FiLoader className="animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <FiSave className="mr-2" />
-                  {editingStaff ? 'Update Staff' : 'Save Staff'}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Form>
-    )}
-  </Formik>
-</div>
-    );
+        resetForm();
+        setSelectedGroup(null);
+        setSelectedServices([]);
+        setShowAddForm(false);
+        setEditingStaff(null);
+        // Handle success - reset form or close modal
+        if (!editingStaff) resetForm();
+        setShowAddForm(false);
+        setEditingStaff(null);
+        if (onSuccess) {
+          onSuccess();
+        }
+        // You might want to add a toast notification here
+        alert(editingStaff ? 'Staff updated successfully!' : 'Staff registered successfully!');
+        
+      } else {
+        // Handle error response
+        alert(data.message || 'Something went wrong');
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Failed to save. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // Initialize form values
+  const initialValues = editingStaff || {
+    name: '',
+    username: '',
+    password: '',
+    contactNo: '',
+    location: '',
+    selectedServiceGroup: '',
+    serviceGroups: []
+  };
+
+  // Handle service group selection
+  const handleServiceGroupChange = (e, setFieldValue) => {
+    const groupId = e.target.value;
+    setFieldValue('selectedServiceGroup', groupId);
+    
+    if (groupId) {
+      const group = serviceGroups.find(g => g._id === groupId);
+      setSelectedGroup(group);
+    } else {
+      setSelectedGroup(null);
+    }
+  };
+
+  // Handle service selection
+  const handleServiceSelection = (e, serviceId, serviceName, setFieldValue) => {
+    if (e.target.checked) {
+      // Add service to selection
+      const updatedServices = [...selectedServices, {
+        serviceId,
+        serviceName
+      }];
+      setSelectedServices(updatedServices);
+      setFieldValue('serviceGroups', updatedServices);
+    } else {
+      // Remove service from selection
+      const updatedServices = selectedServices.filter(s => s.serviceId !== serviceId);
+      setSelectedServices(updatedServices);
+      setFieldValue('serviceGroups', updatedServices);
+    }
+  };
+
+  // Check if a service is selected
+  const isServiceSelected = (serviceId) => {
+    return selectedServices.some(s => s.serviceId === serviceId);
+  };
+
+  // Remove a selected service
+  const removeSelectedService = (serviceId, setFieldValue) => {
+    const updatedServices = selectedServices.filter(s => s.serviceId !== serviceId);
+    setSelectedServices(updatedServices);
+    setFieldValue('serviceGroups', updatedServices);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12 px-4 sm:px-6 lg:px-8 w-full">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">
+            {editingStaff ? 'Edit Staff Member' : 'Staff Registration'}
+          </h2>
+          <p className="text-gray-600 max-w-md mx-auto">
+            {editingStaff ? 'Update staff details below' : 'Complete the form below to register as an authorized staff'}
+          </p>
+        </div>
+      </div>
+
+      <Formik
+        initialValues={initialValues}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+        enableReinitialize
+      >
+        {({ isSubmitting, values, setFieldValue, errors, touched }) => (
+          <Form className="space-y-6">
+            <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 p-6">
+              {/* Personal Information Section */}
+              <div className="mb-8">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FiUser className="text-green-600 text-xl" />
+                  </div>
+                  <h2 className="ml-4 text-xl font-semibold text-gray-800">
+                    Personal Information
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <Field
+                      name="name"
+                      type="text"
+                      className={`w-full px-4 py-3 border ${
+                        values.name ? 'border-green-300' : 'border-gray-300'
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                      placeholder="John Doe"
+                    />
+                    {errors.name && touched.name && <ErrorMessage>{errors.name}</ErrorMessage>}
+                  </div>
+
+                  {/* Contact Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                    <Field
+                      name="contactNo"
+                      type="tel"
+                      className={`w-full px-4 py-3 border ${
+                        values.contactNo ? 'border-green-300' : 'border-gray-300'
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                      placeholder="9876543210"
+                      maxLength="10"
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
+                    {errors.contactNo && touched.contactNo && <ErrorMessage>{errors.contactNo}</ErrorMessage>}
+                  </div>
+
+                  {/* City */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
+                    <div className="relative">
+                      <Field
+                        as="select"
+                        name="location"
+                        className={`w-full px-4 py-3 border ${
+                          values.location ? 'border-green-300' : 'border-gray-300'
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
+                      >
+                        <option value="">Select a location</option>
+                        <option value="Pune">Pune</option>
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="AhilyaNagar">AhilyaNagar</option>
+                        <option value="SambhajiNagar">SambhajiNagar</option>
+                        <option value="Delhi">Delhi</option>
+                      </Field>
+                      <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
+                    </div>
+                    {errors.location && touched.location && <ErrorMessage>{errors.location}</ErrorMessage>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Services Section */}
+              <div className="mb-8">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FiCheck className="text-green-600 text-xl" />
+                  </div>
+                  <h2 className="ml-4 text-xl font-semibold text-gray-800">
+                    Service Groups
+                  </h2>
+                </div>
+
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <FiLoader className="animate-spin text-green-600 text-xl" />
+                    <span className="ml-2 text-gray-600">Loading service groups...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Service Group Dropdown */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Service Group *</label>
+                      <div className="relative">
+                        <Field
+                          as="select"
+                          name="selectedServiceGroup"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white"
+                          onChange={(e) => handleServiceGroupChange(e, setFieldValue)}
+                        >
+                          <option value="">Select a service group</option>
+                          {serviceGroups.map((group) => (
+                            <option key={group._id} value={group._id}>
+                              {group.name}
+                            </option>
+                          ))}
+                        </Field>
+                        <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    
+                    {/* Services for Selected Group */}
+                    {selectedGroup && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select Services from {selectedGroup.name}
+                        </label>
+                        {selectedGroup.services && selectedGroup.services.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedGroup.services.map((service) => (
+                              <div key={service.serviceId} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  id={`service-${service.serviceId}`}
+                                  checked={isServiceSelected(service.serviceId)}
+                                  onChange={(e) => handleServiceSelection(e, service.serviceId, service.name, setFieldValue)}
+                                  className="h-5 w-5 text-green-600 rounded focus:ring-green-500"
+                                />
+                                <label htmlFor={`service-${service.serviceId}`} className="ml-2 text-gray-700">
+                                  {service.name}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 italic">No services available for this group.</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Selected Services Display */}
+                    {selectedServices.length > 0 && (
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Selected Services:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedServices.map((service) => (
+                            <div 
+                              key={service.serviceId} 
+                              className="bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center"
+                            >
+                              <span>{service.serviceName}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeSelectedService(service.serviceId, setFieldValue)}
+                                className="ml-2 text-green-600 hover:text-green-900"
+                              >
+                                <FiX />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {errors.serviceGroups && touched.serviceGroups && (
+                      <div className="text-red-500 text-sm mt-1">{errors.serviceGroups}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Login Information Section */}
+              <div className="mb-8">
+                <div className="flex items-center mb-6">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FiKey className="text-green-600 text-xl" />
+                  </div>
+                  <h2 className="ml-4 text-xl font-semibold text-gray-800">
+                    Login Information
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Username */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Username *</label>
+                    <Field
+                      name="username"
+                      type="text"
+                      className={`w-full px-4 py-3 border ${
+                        values.username ? 'border-green-300' : 'border-gray-300'
+                      } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                      placeholder="johndoe123"
+                    />
+                    {errors.username && touched.username && <ErrorMessage>{errors.username}</ErrorMessage>}
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                    <div className="relative">
+                      <Field
+                        name="password"
+                        type="password"
+                        className={`w-full px-4 py-3 border ${
+                          values.password ? 'border-green-300' : 'border-gray-300'
+                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    {errors.password && touched.password && <ErrorMessage>{errors.password}</ErrorMessage>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditingStaff(null);
+                  }}
+                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 flex items-center transition-colors duration-200"
+                >
+                  <FiX className="mr-2" />
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`px-5 py-2.5 rounded-lg shadow-sm text-white flex items-center transition-colors duration-200 ${
+                    isSubmitting ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <FiLoader className="animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <FiSave className="mr-2" />
+                      {editingStaff ? 'Update Staff' : 'Save Staff'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </Form>
+        )}
+      </Formik>
+    </div>
+  );
+};
   const serviceCounts = calculateServiceCounts(staffs);
   return (
     <div className="container mx-auto px-4 py-8">
@@ -549,7 +805,15 @@ const StaffManagement = () => {
       </div>
 
       {/* Staff Form (Conditionally Rendered) */}
-      {showAddForm && <StaffForm />}
+      {/* {showAddForm && <StaffForm />} */}
+      {showAddForm && (
+  <StaffForm 
+    editingStaff={editingStaff}
+    setShowAddForm={setShowAddForm}
+    setEditingStaff={setEditingStaff}
+    onSuccess={refetchStaffData}
+  />
+)}
 
       {/* Service Cards */}
       {!showAddForm && (
@@ -671,10 +935,22 @@ const StaffManagement = () => {
                             <div className="text-sm text-gray-900">{staff.location}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {staff.ServiceGroup}
-                            </div>
-                          </td>
+  <div className="text-sm text-gray-900">
+    {staff.serviceGroups.length > 0 ? (
+      <button
+        onClick={() => {
+          setSelectedStaffServices(staff.serviceGroups);
+          setShowServicesModal(true);
+        }}
+        className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-md shadow-sm hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+      >
+        View Services
+      </button>
+    ) : (
+      <span className="text-gray-400">No services</span>
+    )}
+  </div>
+</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end space-x-3">
                               <button
@@ -738,6 +1014,12 @@ const StaffManagement = () => {
           )}
         </div>
       )}
+      {showServicesModal && (
+  <ServicesModal 
+    services={selectedStaffServices}
+    onClose={() => setShowServicesModal(false)}
+  />
+)}
 
       {/* Popups */}
       {showAddSuccess && <AddSuccessPopup onClose={() => setShowAddSuccess(false)} />}
