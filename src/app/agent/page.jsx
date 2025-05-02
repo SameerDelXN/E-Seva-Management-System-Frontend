@@ -27,7 +27,16 @@ export default function ServiceGroupsUI() {
     provider: 'Agent', 
     date: new Date().toISOString().split('T')[0],
     delivery: calculateDeliveryDate(new Date(), 7),
-    status: 'Initiated',
+    status: {
+      "name":"initiated",
+      "hexcode":"#12fe11",
+      "askreason":"no"
+    },
+    initialStatus: {
+      "name":"initiated",
+      "hexcode":"#12fe11",
+      "askreason":false
+    },
     service: '',
     serviceId: '', // Add serviceId field to store the _id
     staff: 'Not Assigned',
@@ -115,6 +124,7 @@ export default function ServiceGroupsUI() {
 
   // Open modal with selected service
   const handleOpenModal = (serviceGroup, service) => {
+    console.log("data",service);
     const price = getPriceForAgentPlan(service);
     console.log(service.serviceId)
     setSelectedService({
@@ -129,7 +139,7 @@ export default function ServiceGroupsUI() {
       service: service.name,
       serviceId: service.serviceId, // Store the service ID
       amount: price,
-      status: 'Initiated',
+      status: service.status,
       delivery: calculateDeliveryDate(new Date(), 7),
       date: new Date().toISOString().split('T')[0]
     });
@@ -147,11 +157,7 @@ export default function ServiceGroupsUI() {
     const serviceData = {
       _id: formData.serviceId, // Include the service ID
       name: formData.service,
-      status: {
-        name: formData.status || "Initiated",
-        hexcode: "#34fc23",
-        askreason: false
-      }
+      status:  formData.status ,
     };
     
     // Prepare data for submission

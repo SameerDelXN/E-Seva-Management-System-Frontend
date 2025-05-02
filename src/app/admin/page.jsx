@@ -137,7 +137,7 @@ export default function Dashboard() {
         throw new Error(`Failed to delete application: ${response.status}`);
       }
       else{
-        alert("don");
+        alert(" deletion done");
       }
       
       await response.json(); // Process response if needed
