@@ -497,7 +497,7 @@ export default function App() {
         };
 
         const response = await fetch(
-          `http://localhost:3001/api/admin/manage-plan/add-plan`,
+          `https://dokument-guru-backend.vercel.app/api/admin/manage-plan/add-plan`,
           {
             method: 'POST',
             headers: {

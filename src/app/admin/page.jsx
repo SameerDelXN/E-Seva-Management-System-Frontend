@@ -45,6 +45,7 @@ export default function Dashboard() {
       
       const data = await response.json();
       setApplications(data);
+      console.log("application",data);
       
       // Calculate stats
       const today = new Date().toISOString().split('T')[0];
@@ -470,7 +471,8 @@ export default function Dashboard() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <StatusBadge status={application.status} />
+                          {application.initialStatus[0]?.name || 'No status'}
+                            {/* <StatusBadge status={application.initialStatus} /> */}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
   {typeof application.service === 'object' 
