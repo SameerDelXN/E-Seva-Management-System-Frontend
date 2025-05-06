@@ -1337,7 +1337,7 @@ const ServiceCard = ({
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-          <h3 className="text-white text-xl font-semibold">{title}</h3>
+          <span className="text-white text-xl font-semibold">{title}</span>
         </div>
       </div>
       
