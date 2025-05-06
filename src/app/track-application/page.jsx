@@ -273,19 +273,19 @@ export default function TrackApplication() {
                             )}
                           </div>
                           <div className="flex flex-col items-end">
-                            {app?.currentStatus ? (
+                            {app?.initialStatus ? (
                               <span 
                                 className="text-sm px-3 py-1 rounded-full font-medium"
                                 style={{
-                                  backgroundColor: `${app.currentStatus.hexcode}20`, 
-                                  color: app.currentStatus.hexcode
+                                  backgroundColor: `${app.initialStatus[0].hexcode}20`, 
+                                  color: app?.initialStatus[0].hexcode
                                 }}
                               >
-                                {app.currentStatus.name}
+                                {app.initialStatus[0].name}
                               </span>
                             ) : (
                               <span className={`text-sm px-3 py-1 rounded-full font-medium ${getStatusBadgeClass(app.status)}`}>
-                                {app.status}
+                                {app.initialStatus[0].name}
                               </span>
                             )}
                             <motion.button 
@@ -375,24 +375,24 @@ export default function TrackApplication() {
                   <div className="bg-gray-50 bg-opacity-80 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-gray-100 shadow-sm">
                     <div className="flex flex-wrap items-center gap-4 justify-between mb-4">
                       {/* Status pill */}
-                      {selectedApplication.currentStatus ? (
+                      {selectedApplication.initialStatus[0] ? (
                         <span 
                           className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium" 
                           style={{
-                            backgroundColor: `${selectedApplication.currentStatus.hexcode}20`, 
-                            color: selectedApplication.currentStatus.hexcode
+                            backgroundColor: `${selectedApplication.initialStatus[0].hexcode}20`, 
+                            color: selectedApplication.initialStatus[0].hexcode
                           }}
                         >
                           <span 
                             className="w-2 h-2 rounded-full mr-1.5" 
-                            style={{ backgroundColor: selectedApplication.currentStatus.hexcode }}
+                            style={{ backgroundColor: selectedApplication.initialStatus[0].hexcode }}
                           ></span>
-                          {selectedApplication.currentStatus.name}
+                          {selectedApplication.initialStatus[0].name}
                         </span>
                       ) : (
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClass(selectedApplication.status)}`}>
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusBadgeClass(selectedApplication.initialStatus[0].name)}`}>
                           <span className="w-2 h-2 rounded-full bg-current mr-1.5"></span>
-                          {selectedApplication.status}
+                          {selectedApplication.initialStatus[0].name}
                         </span>
                       )}
                       
@@ -554,7 +554,7 @@ export default function TrackApplication() {
                         {(() => {
                           const stages = getTrackingStages(selectedApplication);
                           const currentStageIndex = getCurrentStageIndex(
-                            selectedApplication.currentStatus || selectedApplication.status,
+                            selectedApplication.initialStatus[0].name ,
                             stages
                           );
                           
