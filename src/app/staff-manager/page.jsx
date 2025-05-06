@@ -1017,7 +1017,6 @@ export default function StaffManagerDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          _id: applicationId, 
           staff: staffName 
         }),
       });
@@ -1025,8 +1024,9 @@ export default function StaffManagerDashboard() {
       if (!response.ok) throw new Error(`Failed to update staff assignment: ${response.status}`);
       
       const updatedApplication = await response.json();
+      console.log(updatedApplication)
       setApplications(applications.map(app => 
-        app._id === applicationId ? updatedApplication : app
+        app._id === updatedApplication._id ? updatedApplication : app
       ));
       
       setIsModalOpen(false);
