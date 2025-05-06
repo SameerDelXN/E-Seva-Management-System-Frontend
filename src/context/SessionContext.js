@@ -35,7 +35,7 @@ export const SessionProvider = ({ children }) => {
       }
 
       const data = await response.json()
-      console.log(data)
+      console.log("sessu = ",data)
       const userSession = {
         user: data.user,
         role: data.user.role,

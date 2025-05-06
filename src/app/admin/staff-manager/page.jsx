@@ -198,7 +198,7 @@ const StaffManagement = () => {
         method = 'PATCH';
       } else {
         // Add new staff
-        url = ' https://dokument-guru-backend.vercel.app/api/admin/staff-manager/add-manager';
+        url = '  http://localhost:3001/api/admin/staff-manager/add-manager';
         method = 'POST';
       }
   
@@ -484,8 +484,8 @@ const StaffManagement = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Staff Management</h1>
-          <p className="text-gray-600 mt-2">Manage all registered staff in your system</p>
+          <h1 className="text-3xl font-bold text-gray-800">Staff-Manager's</h1>
+          <p className="text-gray-600 mt-2">Manage all registered staff-manager in your system</p>
         </div>
         <div className="mt-4 md:mt-0">
           <button
@@ -571,7 +571,7 @@ const StaffManagement = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {(() => {
+                            {/* {(() => {
                               console.log('Registration Date:', staff.registrationDate);
                               if (!staff.registrationDate) return 'N/A';
                               const date = new Date(staff.registrationDate);
@@ -582,7 +582,8 @@ const StaffManagement = () => {
                                     day: 'numeric'
                                   })
                                 : 'N/A';
-                            })()}
+                            })()} */}
+                            <div className="text-sm text-gray-900">{staff.date}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{staff.username}</div>
