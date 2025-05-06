@@ -846,7 +846,7 @@ export default function StaffManagerDashboard() {
   const [filteredStaffMembers, setFilteredStaffMembers] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
 
-  const API_BASE_URL = "http://localhost:3001/api/application";
+  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
   // Stats counters for dashboard
