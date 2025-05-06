@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FiEdit2, FiPlus, FiX, FiSave, FiLoader, FiMapPin, FiSearch } from 'react-icons/fi';
+import { FiEdit2, FiPlus, FiX, FiSave, FiLoader, FiMapPin, FiSearch, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
 import AddSuccessPopup from '@/components/popups/addSucess';
 import UpdateSuccessPopup from '@/components/popups/updateSuccess';
 import Loading from '@/components/Loading';
@@ -10,6 +10,7 @@ const LocationManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [newLocation, setNewLocation] = useState({
     district: '',
@@ -19,6 +20,7 @@ const LocationManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddSuccess, setShowAddSuccess] = useState(false);
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   const [error, setError] = useState(null);
 
   // Fetch locations from API
@@ -144,12 +146,87 @@ const LocationManagement = () => {
     }
   };
 
+  // Handle delete location
+  const handleDeleteLocation = async () => {
+    if (!currentLocation || !currentLocation._id) {
+      setError('No location selected for deletion');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(
+        `https://dokument-guru-backend.vercel.app/api/admin/location/deletelocation/${currentLocation._id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete location');
+      }
+      
+      // Refresh the locations list after successful deletion
+      const fetchResponse = await fetch('https://dokument-guru-backend.vercel.app/api/admin/location/fetch-all');
+      if (!fetchResponse.ok) {
+        throw new Error('Failed to fetch updated locations');
+      }
+      const data = await fetchResponse.json();
+      setLocations(data.locations);
+      
+      setIsDeleteModalOpen(false);
+      setShowDeleteSuccess(true);
+    } catch (err) {
+      console.error('Error deleting location:', err);
+      setError(err.message || 'Failed to delete location');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Open edit modal
   const openEditModal = (location) => {
     setCurrentLocation({ ...location });
     setIsEditModalOpen(true);
     setError(null);
   };
+
+  // Open delete confirmation modal
+  const openDeleteModal = (location) => {
+    setCurrentLocation({ ...location });
+    setIsDeleteModalOpen(true);
+    setError(null);
+  };
+
+  // Simple success popup for delete
+  const DeleteSuccessPopup = ({ onClose }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Location Deleted Successfully!</h3>
+            <p className="text-sm text-gray-500 mb-6">The location has been removed from your service areas.</p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
@@ -216,13 +293,20 @@ const LocationManagement = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{location.district}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.state}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-4">
                           <button
                             onClick={() => openEditModal(location)}
                             className="text-green-600 hover:text-green-900 flex items-center"
                           >
                             <FiEdit2 className="mr-1" />
                             Edit
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(location)}
+                            className="text-red-600 hover:text-red-900 flex items-center"
+                          >
+                            <FiTrash2 className="mr-1" />
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -410,6 +494,77 @@ const LocationManagement = () => {
           </div>
         )}
 
+        {/* Delete Confirmation Modal */}
+        {isDeleteModalOpen && currentLocation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+              <div className="p-6 sm:p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
+                  <button
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setError(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <FiX className="h-5 w-5" />
+                  </button>
+                </div>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+                    {error}
+                  </div>
+                )}
+                <div className="p-4 mb-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <FiAlertTriangle className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800">Warning</h3>
+                      <p className="mt-2 text-sm text-yellow-700">
+                        Are you sure you want to delete the location <span className="font-medium">{currentLocation.district}, {currentLocation.state}</span>? This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-8 flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setError(null);
+                    }}
+                    className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 flex items-center transition-colors duration-200"
+                  >
+                    <FiX className="mr-2" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteLocation}
+                    disabled={isSubmitting}
+                    className={`px-5 py-2.5 rounded-lg shadow-sm text-white flex items-center transition-colors duration-200 ${
+                      isSubmitting ? 'bg-red-400' : 'bg-red-600 hover:bg-red-700'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <FiLoader className="animate-spin mr-2" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <FiTrash2 className="mr-2" />
+                        Delete Location
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Success Popups */}
         {showAddSuccess && (
           <AddSuccessPopup 
@@ -424,6 +579,15 @@ const LocationManagement = () => {
           <UpdateSuccessPopup 
             onClose={() => {
               setShowUpdateSuccess(false);
+              setCurrentLocation(null);
+            }} 
+          />
+        )}
+
+        {showDeleteSuccess && (
+          <DeleteSuccessPopup 
+            onClose={() => {
+              setShowDeleteSuccess(false);
               setCurrentLocation(null);
             }} 
           />
