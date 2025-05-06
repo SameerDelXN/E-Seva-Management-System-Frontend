@@ -109,9 +109,9 @@ export default function StaffDashboard() {
       
       // Prepare current status for history
       const currentStatusEntry = {
-        name: currentApp.currentStatus?.name || currentApp.status || "Initiated",
-        hexcode: currentApp.currentStatus?.hexcode || "#A78BFA",
-        reason: currentApp.currentStatus?.reason || "",
+        name: currentApp.initialStatus?.[0]?.name || currentApp.status || "Initiated",
+        hexcode: currentApp.initialStatus?.[0].hexcode || "#A78BFA",
+        reason: currentApp.initialStatus?.[0].reason || "",
         updatedAt: new Date(),
         updatedBy: "Admin" // Should be replaced with actual logged-in user
       };
@@ -127,12 +127,14 @@ export default function StaffDashboard() {
       
       // Prepare update payload
       const updatePayload = {
-        _id: id,
-        status: newStatus, // Update legacy status field
-        currentStatus: newCurrentStatus,
-        $push: { 
-          statusHistory: currentStatusEntry
-        }
+        ...currentApp,
+        initialStatus: [{
+          name: newStatus,
+          hexcode: statusDetails.hexcode,
+          askreason: statusDetails.askreason,
+          reason: reason,
+          updatedAt: new Date()
+        }]
       };
       
       const response = await fetch(`${API_BASE_URL}/update/${id}`, {
@@ -153,7 +155,7 @@ export default function StaffDashboard() {
       setApplications(applications.map(app => 
         app._id === id ? updatedApplication : app
       ));
-      
+      fetchApplications();
       // Reset editing state
       setEditingStatusId(null);
       setEditingStatus("");
@@ -219,7 +221,7 @@ export default function StaffDashboard() {
   };
   const getCurrentStatus = (application) => {
     // Always use currentStatus.name if available, otherwise fall back to status
-    return application.currentStatus?.name || application.status || "Initiated";
+    return application.initialStatus?.[0]?.name || application.status || "Initiated";
   };
 
   // Handle edit status mode
@@ -231,7 +233,7 @@ export default function StaffDashboard() {
 
   const startEditStatus = (application) => {
     // Always use currentStatus if available, otherwise fall back to status
-    const currentStatusName = application.currentStatus?.name || application.status || "Initiated";
+    const currentStatusName = application.initialStatus?.[0]?.name || application.status || "Initiated";
     
     // Get service-specific status options
     const serviceStatusOptions = getServiceStatusOptions(application);
@@ -448,7 +450,7 @@ export default function StaffDashboard() {
                                                         </div>
                                                       ) : (
                                                         <div className="flex items-center space-x-2">
-                                                          <StatusBadge status={getCurrentStatus(application)} hexcode={application.currentStatus?.hexcode} />
+                                                          <StatusBadge status={getCurrentStatus(application)} hexcode={application.initialStatus?.[0]?.hexcode} />
                                                           <button 
                                                             onClick={() => startEditStatus(application)}
                                                             className="text-indigo-600 hover:text-indigo-900"
@@ -548,18 +550,42 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // Status Badge Component
-function StatusBadge({ status }) {
-  let color = "bg-gray-100 text-gray-800";
-  if (status === "Completed") color = "bg-green-100 text-green-800";
-  if (status === "In Progress") color = "bg-blue-100 text-blue-800";
-  if (status === "Rejected") color = "bg-red-100 text-red-800";
-  if (status === "HSM Authentication") color = "bg-yellow-100 text-yellow-800";
-  if (status === "Initiated") color = "bg-purple-100 text-purple-800";
-  if (status === "In Pursuit") color = "bg-indigo-100 text-indigo-800";
+
+function StatusBadge({ status, hexcode = null }) {
+  const defaultColors = {
+    "Active": "#4CAF50",
+    "pending": "#cbb62a",
+    "final": "#1db7b9",
+    "Initiated": "#A78BFA",
+    "In Progress": "#F59E0B",
+    "Completed": "#10B981",
+    "Rejected": "#EF4444",
+    "On Hold": "#6B7280",
+    "Pending": "#3B82F6",
+    "Cancelled": "#1F2937"
+  };
+
+  const colorHex = hexcode || defaultColors[status] || "#A78BFA";
+  
+  const isLightColor = (hexColor) => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128;
+  };
+  
+  const textColor = isLightColor(colorHex) ? '#1F2937' : '#FFFFFF';
   
   return (
-    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
-      {status || "Unknown"}
+    <span 
+      className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+      style={{ 
+        backgroundColor: colorHex,
+        color: textColor
+      }}
+    >
+      {status}
     </span>
   );
 }
