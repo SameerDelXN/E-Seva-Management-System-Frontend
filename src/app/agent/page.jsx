@@ -130,7 +130,7 @@ export default function ServiceGroupsUI() {
     setSelectedService({
       groupName: serviceGroup.name,
       ...service,
-      price: price
+      price: service.price
     });
     
     // Pre-populate form with service data including the service ID
@@ -138,7 +138,7 @@ export default function ServiceGroupsUI() {
       ...formData,
       service: service.name,
       serviceId: service.serviceId, // Store the service ID
-      amount: price,
+      amount: service.price,
       status: service.status,
       delivery: calculateDeliveryDate(new Date(), 7),
       date: new Date().toISOString().split('T')[0]
