@@ -884,11 +884,12 @@ const ServiceModal = ({
   const [formData, setFormData] = useState({
     name: '',
     documents: [],
-    formInputs: [],
+    // formInputs: [],
     note: '',
     price: '',
     planPrices:[],
-    group: ''
+    group: '',
+    status: [] 
   });
   const [locations ,setLocations]=useState(service?.planPrice || []);
   const [plans,setPlans]=useState([]);
@@ -956,12 +957,13 @@ const [newplan,selectnewplan]=useState([]);
       setFormData({
         name: service.name || '',
         documents: service.documents || [],
-        formInputs: service.formInputs || [],
+        // formInputs: service.formInputs || [],
         note: service.note || '',
         price: service.price || '',
         group: service.group || '',
         planPrices:service.planPrice,
-        id: service.id || ''
+        id: service.id || '',
+        status: service.status || []
       });
     }
     
@@ -1134,21 +1136,38 @@ const [newplan,selectnewplan]=useState([]);
       formInputs: prev.formInputs.filter((_, i) => i !== index)
     }));
   };
-
+  const handleDeleteStatus = (statusId) => {
+    console.log(statusId);
+    // Remove from both statuses state and formData.status
+     const updatedStatuses = statuses.filter(status => status.name !== statusId);
+     console.log(updatedStatuses);
+     setStatuses(updatedStatuses);
+    
+    // // Update formData with the new status array
+    setFormData(prev => ({
+      ...prev,
+     status: updatedStatuses
+    }));
+  };
   const handleSubmit = async(e) => {
     e.preventDefault();
     // onSave(formData);
      console.log("sdfe",formData);
 
     try {
-        const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
-          method: 'PATCH',
+        const response = await fetch(`  https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: formData.name,
-            documents: formData.documents, // should be an array of strings
+            name:formData.name,
+            document:formData.documents,
+            planPrices:formData.planPrices,
+            serviceGroup:formData.group,
+            status:formData.status,
+            price:formData.price
+            
           }),
         });
     
@@ -1304,7 +1323,7 @@ const [newplan,selectnewplan]=useState([]);
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                   <button 
                     onClick={() => handleEditStatus(status)}
                     className="text-blue-600 hover:text-blue-800 transition duration-200 flex items-center gap-1"
@@ -1312,7 +1331,26 @@ const [newplan,selectnewplan]=useState([]);
                     <Pencil className="w-4 h-4" />
                     Edit
                   </button>
-                </td>
+                </td> */}
+              
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+  <div className="flex gap-2">
+    <button 
+      onClick={() => handleEditStatus(status)}
+      className="text-blue-600 hover:text-blue-800 transition duration-200 flex items-center gap-1"
+    >
+      <Pencil className="w-4 h-4" />
+      Edit
+    </button>
+    <button 
+      onClick={() => handleDeleteStatus(status.name)}
+      className="text-red-600 hover:text-red-800 transition duration-200 flex items-center gap-1"
+    >
+      <Trash2 className="w-4 h-4" />
+      Delete
+    </button>
+  </div>
+</td>
               </tr>
             ))}
           </tbody>
