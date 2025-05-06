@@ -2410,13 +2410,13 @@ const AgentManagement = () => {
                         >
                           <span>Recharge</span>
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => handleOpenChangePlan(agent)}
                           className="text-purple-600 hover:text-purple-900 p-1 rounded-full hover:bg-purple-50"
                           title="Change Plan"
                         >
                           <span>Update Plan</span>
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handleDeleteAgent(agent._id)}
                           className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"

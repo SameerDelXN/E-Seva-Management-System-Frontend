@@ -315,7 +315,7 @@ export default function ServiceGroupsUI() {
                             onClick={() => handleOpenModal(group, service)}
                             className="flex items-center text-sm bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1 rounded-md"
                           >
-                            ₹{price}
+                            ₹{service.price}
                             <FiPlus className="ml-2 h-4 w-4" />
                           </button>
                         </div>
