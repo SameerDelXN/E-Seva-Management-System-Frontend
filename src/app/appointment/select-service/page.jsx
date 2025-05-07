@@ -437,71 +437,69 @@
 
 
 
-
-
 "use client";
-import React from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppointment } from '@/context/AppointmentContext';
 import { motion } from 'framer-motion';
 import { 
-  FileText, FileCheck, User, Gavel, Building, Globe, 
-  Zap, Database, Users, Award, ChevronLeft, ChevronRight,
-  CreditCard, Clock, Check
+  ChevronLeft, ChevronRight, Clock, Check
 } from 'lucide-react';
 
 const SelectService = () => {
   const router = useRouter();
   const { updateService, updateCategory, appointmentData } = useAppointment();
+  const [serviceGroups, setServiceGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedServiceGroup, setSelectedServiceGroup] = useState(null);
 
-  const categories = [
-    { id: 1, name: 'E Seva Kendra', icon: <FileText className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /> },
-    { id: 2, name: 'RTO Services', icon: <FileCheck className="w-5 h-5 md:w-6 md:h-6 text-blue-600" /> },
-    { id: 3, name: 'CA Services', icon: <Database className="w-5 h-5 md:w-6 md:h-6 text-amber-600" /> },
-    { id: 4, name: 'Legal Services', icon: <Gavel className="w-5 h-5 md:w-6 md:h-6 text-red-600" /> },
-    { id: 5, name: 'Banking Services', icon: <Building className="w-5 h-5 md:w-6 md:h-6 text-purple-600" /> },
-    { id: 6, name: 'Online Form', icon: <Globe className="w-5 h-5 md:w-6 md:h-6 text-cyan-600" /> },
-    { id: 7, name: 'Quick Services', icon: <Zap className="w-5 h-5 md:w-6 md:h-6 text-orange-600" /> },
-    { id: 8, name: 'Maha E-Seva', icon: <Award className="w-5 h-5 md:w-6 md:h-6 text-green-600" /> },
-    { id: 9, name: 'Membership', icon: <Users className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" /> },
-    { id: 10, name: 'ABHIMEX', icon: <FileText className="w-5 h-5 md:w-6 md:h-6 text-teal-600" /> },
-  ];
-
-  const allServices = {
-    1: [
-      { 
-        id: 101, 
-        name: 'Aadhaar Services', 
-        price: '100 Rs.', 
-        duration: '30 mins', 
-        icon: <User className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /> 
-      },
-      { 
-        id: 102, 
-        name: 'PAN Card Services', 
-        price: '150 Rs.', 
-        duration: '45 mins', 
-        icon: <CreditCard className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /> 
-      },
-      { 
-        id: 103, 
-        name: 'Voter ID Services', 
-        price: '100 Rs.', 
-        duration: '30 mins', 
-        icon: <FileCheck className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /> 
+  useEffect(() => {
+    const fetchServiceGroups = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/getAll-Groups');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch service groups');
+        }
+        
+        const data = await response.json();
+        setServiceGroups(data.serviceGroups || []);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching service groups:', err);
+        setError(err.message);
+        setLoading(false);
       }
-    ],
-    // ... other services remain the same
-  };
+    };
 
-  const handleCategorySelect = (category) => {
-    updateCategory(category);
-    updateService(null);
+    fetchServiceGroups();
+  }, []);
+
+  const handleServiceGroupSelect = (serviceGroup) => {
+    setSelectedServiceGroup(serviceGroup);
+    updateCategory({
+      id: serviceGroup._id,
+      name: serviceGroup.name,
+      icon: getServiceGroupIcon(serviceGroup.name)
+    });
   };
 
   const handleServiceSelect = (service) => {
-    updateService(service);
+    updateService({
+      id: service.serviceId,
+      name: service.name,
+      price: `${service.price} Rs.`,
+      duration: '30 mins', // You might want to add duration to your API data
+      documents: service.documentNames
+    });
+  };
+
+  const handleBack = () => {
+    setSelectedServiceGroup(null);
+    updateCategory(null);
+    updateService(null);
   };
 
   const handleNext = () => {
@@ -511,6 +509,29 @@ const SelectService = () => {
     }
     router.push('/appointment/date-time');
   };
+
+  // Function to get icon based on service group name
+  const getServiceGroupIcon = (name) => {
+    // This is a placeholder. You should import and use your actual icons
+    // based on the service group names
+    return <div className="w-5 h-5 md:w-6 md:h-6 text-emerald-600"></div>;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 items-center justify-center">
+        <div className="text-emerald-600 text-lg font-medium">Loading services...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100 items-center justify-center">
+        <div className="text-red-600 text-lg font-medium">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-emerald-50 to-teal-100">
@@ -549,14 +570,14 @@ const SelectService = () => {
             transition={{ duration: 0.7, delay: 0.3 }}
             className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 md:p-8 border border-emerald-100"
           >
-            {!appointmentData.category ? (
+            {!selectedServiceGroup ? (
               <>
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">Categories</h2>
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">Service Categories</h2>
                 
                 <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4">
-                  {categories.map((category, index) => (
+                  {serviceGroups.map((serviceGroup, index) => (
                     <motion.div
-                      key={category.id}
+                      key={serviceGroup._id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 * index }}
@@ -564,14 +585,22 @@ const SelectService = () => {
                       whileTap={{ scale: 0.98 }}
                     >
                       <button
-                        onClick={() => handleCategorySelect(category)}
+                        onClick={() => handleServiceGroupSelect(serviceGroup)}
                         className="w-full h-full bg-white border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-emerald-300 hover:bg-emerald-50 transition-all flex flex-col items-center group shadow-sm hover:shadow-md"
                       >
                         <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 mb-2 sm:mb-3 flex items-center justify-center bg-white rounded-full p-2 sm:p-3 shadow-sm group-hover:shadow-md transition-all">
-                          {category.icon}
+                          {serviceGroup.image ? (
+                            <img 
+                              src={serviceGroup.image} 
+                              alt={serviceGroup.name} 
+                              className="w-full h-full object-contain rounded-full"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 md:w-6 md:h-6 text-emerald-600"></div>
+                          )}
                         </div>
                         <span className="text-xs sm:text-sm font-medium text-gray-700 text-center group-hover:text-emerald-700 transition-colors">
-                          {category.name}
+                          {serviceGroup.name}
                         </span>
                       </button>
                     </motion.div>
@@ -582,7 +611,7 @@ const SelectService = () => {
               <>
                 <div className="flex items-center mb-4 sm:mb-6">
                   <motion.button 
-                    onClick={() => updateCategory(null)}
+                    onClick={handleBack}
                     className="flex items-center text-sm sm:text-base text-emerald-600 hover:text-emerald-700 transition-colors font-medium"
                     whileHover={{ x: -3 }}
                   >
@@ -592,38 +621,52 @@ const SelectService = () => {
                 </div>
                 
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6 flex items-center">
-                  <span className="hidden sm:inline-block">{appointmentData.category.icon}</span>
-                  <span className="ml-0 sm:ml-2">{appointmentData.category.name} Services</span>
+                  {selectedServiceGroup.image && (
+                    <img 
+                      src={selectedServiceGroup.image} 
+                      alt={selectedServiceGroup.name} 
+                      className="w-8 h-8 mr-2 rounded-full object-cover hidden sm:inline-block"
+                    />
+                  )}
+                  <span className="ml-0 sm:ml-2">{selectedServiceGroup.name} Services</span>
                 </h2>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {allServices[appointmentData.category.id]?.map((service, index) => (
-                    <ServiceCard 
-                      key={service.id}
-                      service={service}
-                      isSelected={appointmentData.service?.id === service.id}
-                      onSelect={() => handleServiceSelect(service)}
-                      index={index}
-                    />
-                  ))}
-                </div>
+                {selectedServiceGroup.services.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {selectedServiceGroup.services.map((service, index) => (
+                      <ServiceCard 
+                        key={service.serviceId}
+                        service={service}
+                        isSelected={appointmentData.service?.id === service.serviceId}
+                        onSelect={() => handleServiceSelect(service)}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No services available in this category.</p>
+                  </div>
+                )}
                 
-                <div className="mt-6 sm:mt-8 flex justify-end">
-                  <motion.button 
-                    onClick={handleNext}
-                    disabled={!appointmentData.service}
-                    whileHover={appointmentData.service ? { scale: 1.03 } : {}}
-                    whileTap={appointmentData.service ? { scale: 0.97 } : {}}
-                    className={`px-6 py-2 sm:px-8 sm:py-3 rounded-lg text-base sm:text-lg font-medium flex items-center transition-all ${
-                      appointmentData.service
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg'
-                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    Continue to Date & Time
-                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
-                  </motion.button>
-                </div>
+                {selectedServiceGroup.services.length > 0 && (
+                  <div className="mt-6 sm:mt-8 flex justify-end">
+                    <motion.button 
+                      onClick={handleNext}
+                      disabled={!appointmentData.service}
+                      whileHover={appointmentData.service ? { scale: 1.03 } : {}}
+                      whileTap={appointmentData.service ? { scale: 0.97 } : {}}
+                      className={`px-6 py-2 sm:px-8 sm:py-3 rounded-lg text-base sm:text-lg font-medium flex items-center transition-all ${
+                        appointmentData.service
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg'
+                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Continue to Date & Time
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-1" />
+                    </motion.button>
+                  </div>
+                )}
               </>
             )}
           </motion.div>
@@ -651,7 +694,9 @@ const ServiceCard = ({ service, isSelected, onSelect, index }) => (
         <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center bg-white rounded-full p-2 sm:p-3 shadow-sm ${
           isSelected ? 'ring-2 sm:ring-4 ring-emerald-200' : ''
         }`}>
-          {service.icon}
+          <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 font-semibold">
+            {service.name.charAt(0)}
+          </div>
         </div>
       </div>
       
@@ -661,9 +706,21 @@ const ServiceCard = ({ service, isSelected, onSelect, index }) => (
         }`}>
           {service.name}
         </h4>
+        {service.documentNames && service.documentNames.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 mb-1">Required Documents:</p>
+            <div className="flex flex-wrap justify-center gap-1">
+              {service.documentNames.map((doc, idx) => (
+                <span key={idx} className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                  {doc}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 flex items-center justify-center">
           <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400" />
-          {service.duration}
+          30 mins
         </p>
       </div>
       
@@ -673,7 +730,7 @@ const ServiceCard = ({ service, isSelected, onSelect, index }) => (
             ? 'bg-emerald-600 text-white' 
             : 'bg-gray-100 text-gray-700'
         }`}>
-          {service.price}
+          {service.price} Rs.
         </span>
       </div>
     </div>

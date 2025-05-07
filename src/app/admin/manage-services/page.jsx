@@ -746,7 +746,8 @@ const App = () => {
           planPrice: service.planPrices,
           group: service.serviceGroup?.name || "Uncategorized", // Get group name from group object
           groupId: service.serviceGroup?.id, // Store the group ID
-          status: service.status || []
+          status: service.status || [],
+          formData : service.formData || []
         }));
 
         setServices(formattedServices);
@@ -853,7 +854,7 @@ const App = () => {
     console.log("Cleaned data for API:", cleanedData);
     
     try {
-      const res = await fetch('  https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
+      const res = await fetch('https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

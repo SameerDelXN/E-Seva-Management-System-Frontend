@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect,useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PlusIcon, HomeIcon, Trash2Icon, PencilIcon, XIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon } from 'lucide-react';
 import AddSuccessPopup from '@/components/popups/addSucess';
 import UpdateSuccessPopup from '@/components/popups/updateSuccess';
@@ -8,100 +8,7 @@ import DeleteConfirmationPopup from '@/components/popups/deleteConfirmation';
 import LoadingSpinner from '@/components/Loading';
 
 export default function App() {
-  // Initial plans data
-  const initialPlans = [
-    {
-      id: '1',
-      name: 'Amol Awari',
-      price: 0,
-      duration: 365,
-      durationUnit: 'days',
-      services: [
-        {
-          name: 'Sahamati Patr(Affidavit) (Maha E Seva Kendra)',
-        },
-      ],
-    },
-    {
-      id: '2',
-      name: 'Driving School',
-      price: 0,
-      duration: 365,
-      durationUnit: 'days',
-      services: [
-        {
-          name: 'Police Verification (E Seva Kendra)',
-        },
-        {
-          name: 'Rent Agreement (E Seva Kendra)',
-        },
-        {
-          name: 'Notary Agreement (E Seva Kendra)',
-        },
-        {
-          name: 'POLICE VERIFICATION WITH APPROVED (E Seva Kendra)',
-        },
-        {
-          name: 'Rahivasi Dakhla (Maha E Seva Kendra)',
-        },
-        {
-          name: 'Sahamati Patr(Affidavit) (Maha E Seva Kendra)',
-        },
-        {
-          name: 'Rahivasi With CPL (Maha E Seva Kendra)',
-        },
-        {
-          name: 'Rahivasi with Affidavit (Maha E Seva Kendra)',
-        },
-      ],
-    },
-    {
-      id: '3',
-      name: 'maha e seva monthly Suscription',
-      price: 3000,
-      duration: 30,
-      durationUnit: 'days',
-      services: [
-        {
-          name: 'Pan Card (E Seva Kendra)',
-        },
-        {
-          name: 'Udyam Aadhar (E Seva Kendra)',
-        },
-        {
-          name: 'Shop Act (E Seva Kendra)',
-        },
-        {
-          name: 'Police Verification (E Seva Kendra)',
-        },
-      ],
-    },
-  ];
-
-//   const fetchPlans = async () => {
-//     try {
-//         const response = await fetch(" http://localhost:3000/api/admin/manage-plan/fetch-plans", {
-//             method: 'GET'
-//         });
-
-//         if (!response.ok) {
-//             console.log("Failed to fetch staff managers. Status:", response.status);
-//             return [];
-//         }
-        
-//         const data = await response.json();
-//         console.log("Fetched Staff Managers:", data);
-//         return data.plans;
-       
-//     } catch (error) {
-//         console.error("Error fetching staff managers:", error.message);
-//         return [];
-//     }
-// };
-
   // State hooks
-  // const [plans, setPlans] = useState({plansData});
-  // const [filteredPlans, setFilteredPlans] = useState(plansData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
@@ -111,6 +18,14 @@ export default function App() {
   const [expandedPlan, setExpandedPlan] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [isLoading, setIsLoading] = useState(false);
+  const [services, setServices] = useState([]);
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('');
+  const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  
+  // Ref for service dropdown
+  const serviceDropdownRef = useRef(null);
+  const serviceInputRef = useRef(null);
+  
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -132,38 +47,71 @@ export default function App() {
   });
 
   // Initialize plans state
-  const [plans, setPlans] = useState(initialPlans);
-  const [filteredPlans, setFilteredPlans] = useState(initialPlans);
+  const [plans, setPlans] = useState([]);
+  const [filteredPlans, setFilteredPlans] = useState([]);
 
-  // useEffect(async()=>{
+  // Handle clicks outside of the dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        serviceDropdownRef.current && 
+        !serviceDropdownRef.current.contains(event.target) &&
+        serviceInputRef.current &&
+        !serviceInputRef.current.contains(event.target)
+      ) {
+        setShowServiceDropdown(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [serviceDropdownRef, serviceInputRef]);
 
-  //  const plansData= await fetchPlans();
+  const fetchServices = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/newService/fetch-all-services", {
+        method: 'GET'
+      });
 
-  // },[])
-
-
-
-
-
+      if (!response.ok) {
+        console.log("Failed to fetch services. Status:", response.status);
+        return [];
+      }
+      
+      const data = await response.json();
+      console.log("Fetched Services:", data);
+      return data.servicesData || [];
+    } catch (error) {
+      console.error("Error fetching services:", error.message);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
   
   const fetchPlans = useCallback(async () => {
     try {
+      setIsLoading(true);
       const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/manage-plan/fetch-plans", {
         method: 'GET'
       });
 
       if (!response.ok) {
-        console.log("Failed to fetch staff managers. Status:", response.status);
+        console.log("Failed to fetch plans. Status:", response.status);
         return [];
       }
       
       const data = await response.json();
-      console.log("Fetched Staff Managers:", data);
+      console.log("Fetched Plans:", data);
       return data.plans || [];
-     
     } catch (error) {
-      console.error("Error fetching staff managers:", error.message);
+      console.error("Error fetching plans:", error.message);
       return [];
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -171,19 +119,27 @@ export default function App() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const plansData = await fetchPlans();
+        const [plansData, servicesData] = await Promise.all([
+          fetchPlans(),
+          fetchServices()
+        ]);
+        
         if (plansData && plansData.length > 0) {
           setPlans(plansData);
           setFilteredPlans(plansData);
         }
+        
+        if (servicesData && servicesData.length > 0) {
+          setServices(servicesData);
+        }
       } catch (error) {
-        console.error("Error fetching plans:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, [fetchPlans]);
+  }, [fetchPlans, fetchServices]);
 
   // Add useEffect for search functionality
   useEffect(() => {
@@ -202,6 +158,17 @@ export default function App() {
       setFilteredPlans(filtered);
     }
   }, [searchTerm, plans]);
+
+  // Filter services based on search term
+  const filteredServices = React.useMemo(() => {
+    if (!serviceSearchTerm.trim()) {
+      return services;
+    }
+    
+    return services.filter(service => 
+      service.name.toLowerCase().includes(serviceSearchTerm.toLowerCase())
+    );
+  }, [services, serviceSearchTerm]);
 
   // Sort plans
   const sortedPlans = React.useMemo(() => {
@@ -270,15 +237,6 @@ export default function App() {
     setShowDeleteConfirmation(true);
   };
 
-  // Handle confirming plan deletion
-  // const handleDeleteConfirm = () => {
-  //   if (currentPlan) {
-  //     setPlans(plans.filter((plan) => plan._id !== currentPlan._id));
-  //   }
-  //   setIsDeleteModalOpen(false);
-  //   setCurrentPlan(null);
-  // };
-
   const handleDeleteConfirm = async () => {
     if (!currentPlan) return;
 
@@ -325,16 +283,17 @@ export default function App() {
     }
   };
 
-  // Handle adding a new service to the plan
-  const handleAddService = () => {
-    if (newService.trim()) {
+  // Handle adding a service to the plan from the dropdown
+  const handleSelectService = (service) => {
+    const serviceExists = formData.services.some(s => 
+      s.name === service.name
+    );
+    
+    if (!serviceExists) {
       setFormData(prevFormData => ({
         ...prevFormData,
-        services: Array.isArray(prevFormData.services) 
-          ? [...prevFormData.services, { name: newService.trim() }]
-          : [{ name: newService.trim() }],
+        services: [...prevFormData.services, { name: service.name }],
       }));
-      setNewService('');
       
       // Clear services error when adding a service
       if (errors.services) {
@@ -344,72 +303,18 @@ export default function App() {
         });
       }
     }
+    
+    setServiceSearchTerm('');
+    setShowServiceDropdown(false);
   };
 
   // Handle removing a service from the plan
   const handleRemoveService = (index) => {
     setFormData(prevFormData => ({
       ...prevFormData,
-      services: Array.isArray(prevFormData.services) 
-        ? prevFormData.services.filter((_, i) => i !== index)
-        : [],
+      services: prevFormData.services.filter((_, i) => i !== index),
     }));
   };
-
-  // Handle form submission
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   if (isEditing && currentPlan) {
-  //     // Update existing plan
-  //     setPlans(
-  //       plans.map((plan) =>
-  //         plan.id === currentPlan.id
-  //           ? {
-  //               ...formData,
-  //               id: currentPlan.id,
-  //             }
-  //           : plan,
-  //       ),
-  //     );
-  //   } else {
-      
-  //     // Add new plan
-  //     console.log("this datt"+formData);
-  //     const newPlan = {
-  //       ...formData,
-  //       id: Date.now().toString(),
-  //     };
-  //     setPlans([...plans, newPlan]);
-  //     console.log(newPlan);
-
-
-
-  //     try {
-  //       const response = await fetch(` http://localhost:3000/api/admin/manage-plan/add-plan`, {
-  //         method: 'POST',
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           // Add any authentication headers if needed
-  //           // 'Authorization': `Bearer ${yourAuthToken}`,
-  //         },
-  //         body: JSON.stringify(newPlan),
-  //       });
-  //       setIsModalOpen(false);
-  //       if (!response.ok) {
-  //         throw new Error('Failed to add plan');
-  //       }
-  
-  //       const data = await response.json();
-  //        setIsModalOpen(false);
-  //       return data; // Assuming the API returns the created plan with an ID
-  //     } catch (err) {
-  //       console.log(err)
-  //     }
-  //   }
-    
-  //   setIsModalOpen(false);
-  //   setCurrentPlan(null);
-  // };
 
   const fetchAndSetPlans = async () => {
     try {
@@ -538,6 +443,11 @@ export default function App() {
   // Toggle plan expansion
   const toggleExpandPlan = (planId) => {
     setExpandedPlan(expandedPlan === planId ? null : planId);
+  };
+
+  // Toggle the service dropdown
+  const toggleServiceDropdown = () => {
+    setShowServiceDropdown(!showServiceDropdown);
   };
 
   return (
@@ -808,38 +718,69 @@ export default function App() {
                     )}
                   </div>
                   {errors.services && <p className="mt-1 text-sm text-red-600">{errors.services}</p>}
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={newService}
-                      onChange={(e) => setNewService(e.target.value)}
-                      placeholder="Enter service name"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddService())}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddService}
-                      className="px-4 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700 transition"
-                      disabled={!newService.trim()}
-                    >
-                      Add
-                    </button>
+                  
+                  {/* Service Selection - Improved Dropdown */}
+                  <div className="relative">
+                    <div className="flex">
+                      <div className="relative flex-1">
+                        <input
+                          ref={serviceInputRef}
+                          type="text"
+                          value={serviceSearchTerm}
+                          onChange={(e) => setServiceSearchTerm(e.target.value)}
+                          onFocus={() => setShowServiceDropdown(true)}
+                          placeholder="Search for a service to add..."
+                          className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        />
+                        {showServiceDropdown && (
+                          <div 
+                            ref={serviceDropdownRef}
+                            className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                            style={{ maxHeight: '250px' }}
+                          >
+                            {filteredServices.length > 0 ? (
+                              filteredServices.map((service) => (
+                                <div
+                                  key={service._id}
+                                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                  onClick={() => handleSelectService(service)}
+                                >
+                                  {service.name}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-2 text-gray-500">No services found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleServiceDropdown}
+                        className="bg-gray-200 hover:bg-gray-300 px-4 rounded-r-lg flex items-center justify-center"
+                      >
+                        {showServiceDropdown ? (
+                          <ChevronUpIcon size={20} />
+                        ) : (
+                          <ChevronDownIcon size={20} />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-6 mt-6 border-t">
+              <div className="mt-8 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-600 text-white rounded-lg hover:from-green-700 hover:to-green-700 transition shadow-md"
+                  className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                 >
                   {isEditing ? 'Update Plan' : 'Create Plan'}
                 </button>
@@ -849,33 +790,35 @@ export default function App() {
         </div>
       )}
 
-      {/* Delete Confirmation Popup */}
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && (
-        <DeleteConfirmationPopup 
-          onConfirm={() => {
-            setShowDeleteConfirmation(false);
-            handleDeleteConfirm();
-          }}
-          onCancel={() => {
-            setShowDeleteConfirmation(false);
-            setCurrentPlan(null);
-          }}
+        <DeleteConfirmationPopup
+          itemName={currentPlan?.name}
+          onCancel={() => setShowDeleteConfirmation(false)}
+          onConfirm={handleDeleteConfirm}
         />
       )}
 
-      {/* Add Success Popup */}
+      {/* Success popups */}
       {showAddSuccess && (
-        <AddSuccessPopup onClose={() => setShowAddSuccess(false)} />
+        <AddSuccessPopup 
+          message="Plan added successfully!" 
+          onClose={() => setShowAddSuccess(false)} 
+        />
       )}
-
-      {/* Update Success Popup */}
+      
       {showUpdateSuccess && (
-        <UpdateSuccessPopup onClose={() => setShowUpdateSuccess(false)} />
+        <UpdateSuccessPopup 
+          message="Plan updated successfully!" 
+          onClose={() => setShowUpdateSuccess(false)} 
+        />
       )}
-
-      {/* Delete Success Popup */}
+      
       {showDeleteSuccess && (
-        <DeleteSuccessPopup onClose={() => setShowDeleteSuccess(false)} />
+        <DeleteSuccessPopup 
+          message="Plan deleted successfully!" 
+          onClose={() => setShowDeleteSuccess(false)} 
+        />
       )}
     </div>
   );

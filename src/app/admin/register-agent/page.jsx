@@ -98,25 +98,26 @@ const AgentManagement = () => {
   
     fetchLocations();
   }, []);
-  useEffect(() => {
-    const fetchAgents = async () => {
-      try {
-        const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/agent/fetch-agents",{
-          method:'GET'
-        });
-        
-        if (!response.ok) {
-          console.error("Failed to fetch agents. Status:", response.status);
-          return;
-        }
-        console.log(response.data)
-        const data = await response.json();
-        setAgents(data.data); // Store fetched data in state
-      } catch (error) {
-        console.error("Error fetching agents:", error.message);
+  const fetchAgents = async () => {
+    try {
+      const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/agent/fetch-agents",{
+        method:'GET'
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to fetch agents. Status:", response.status);
+        return;
       }
-    };
+      console.log(response.data)
+      const data = await response.json();
+      setAgents(data.data); // Store fetched data in state
+    } catch (error) {
+      console.error("Error fetching agents:", error.message);
+    }
+  };
 
+  useEffect(() => {
+   
     fetchAgents();
   }, []);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1112,7 +1113,53 @@ const AgentManagement = () => {
     setShowChangePlanModal(true);
   };
   // Recharge Modal
-  const RechargeModal = () => {
+  const RechargeModal = ( { onRechargeSuccess }) => {
+    console.log(currentAgent._id)
+    const [rechargeAmount, setRechargeAmount] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
+  
+    const handleRechargeSubmit = async () => {
+      // Validation
+      if (!rechargeAmount || parseFloat(rechargeAmount) <= 0) {
+        setError('Please enter a valid amount greater than 0');
+        return;
+      }
+  
+      setIsSubmitting(true);
+      setError('');
+  
+      try {
+        const response = await fetch('http://localhost:3001/api/agent/recharge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            agentId: currentAgent?._id,
+            amount: rechargeAmount
+          }),
+        });
+  
+        const data = await response.json();
+  
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to recharge wallet');
+        }
+  
+        // On successful recharge
+        setIsSubmitting(false);
+        if (onRechargeSuccess) {
+          onRechargeSuccess(data); // Pass the updated data back to parent component
+        }
+        setShowRechargeModal(false)
+        fetchAgents()
+      } catch (err) {
+        setIsSubmitting(false);
+        setError(err.message || 'An error occurred while processing your request');
+      }
+    };
+  
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
@@ -1125,15 +1172,22 @@ const AgentManagement = () => {
               Current Balance: <span className="font-semibold">₹{currentAgent?.balance}</span>
             </label>
           </div>
+  
+          {error && (
+            <div className="mb-4 text-red-500 text-sm bg-red-50 p-2 rounded">
+              {error}
+            </div>
+          )}
+  
           <div className="mb-4">
-            <label htmlFor="lastRecharge" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="rechargeAmount" className="block text-sm font-medium text-gray-700 mb-1">
               Recharge Amount (₹) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
-              id="lastRecharge"
-              value={lastRecharge}
-              onChange={(e) => setlastRecharge(e.target.value)}
+              id="rechargeAmount"
+              value={rechargeAmount}
+              onChange={(e) => setRechargeAmount(e.target.value)}
               className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               placeholder="Enter amount"
             />
@@ -1142,20 +1196,23 @@ const AgentManagement = () => {
             <button
               onClick={() => setShowRechargeModal(false)}
               className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               onClick={handleRechargeSubmit}
-              className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:bg-green-300"
             >
-              Confirm Recharge
+              {isSubmitting ? 'Processing...' : 'Confirm Recharge'}
             </button>
           </div>
         </div>
       </div>
     );
   };
+  
   const AddAgentForm = () => {
     const [formData, setFormData] = useState({
       fullName: '',
@@ -2157,7 +2214,7 @@ const AgentManagement = () => {
       }
     });
   };
-
+  console.log("filu = ",filteredAgents)
   return (
     <div className="container mx-auto px-4 py-8">
       <Toaster/>
@@ -2318,18 +2375,18 @@ const AgentManagement = () => {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date of Purchased Plan
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Payment Method
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th> */}
+                {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Paid Amount (₹)
-                </th>
+                </th> */}
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Recharge (₹)
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Unpaid Amount (₹)
-                </th>
+                </th> */}
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Balance (₹)
                 </th>
@@ -2379,20 +2436,20 @@ const AgentManagement = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {agent.dateOfPurchasePlan}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {agent.paymentMethod}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                    </td> */}
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
                       ₹{agent.paidAmount}
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
                       ₹{agent.lastRecharge}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
                       ₹{agent.unpaidAmount}
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-medium">
-                      ₹{agent.balance}
+                      ₹{agent.wallet ? agent.wallet : "0"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
