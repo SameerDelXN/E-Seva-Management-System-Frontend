@@ -170,7 +170,7 @@ export default function ServiceGroupsUI() {
     console.log("final",submissionData);
     try {
       // Update the API endpoint to your actual endpoint
-      const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
+      const response = await fetch("http://localhost:3001/api/application/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

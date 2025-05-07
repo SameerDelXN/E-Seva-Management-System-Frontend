@@ -819,6 +819,31 @@
 // }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -1173,6 +1198,7 @@ export default function StaffManagerDashboard() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                      {/* //<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark</th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -1494,3 +1520,1055 @@ function StatusBadge({ status, hexcode = null }) {
     </span>
   );
 }
+
+
+
+
+// "use client";
+
+// import { useState, useEffect } from 'react';
+// import { FiRefreshCw, FiFile, FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiPlus, FiTrash2 } from 'react-icons/fi';
+
+// export default function StaffManagerDashboard() {
+//   const [applications, setApplications] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+
+//   // Add state for editing application status
+//   const [editingStatusId, setEditingStatusId] = useState(null);
+//   const [editingStatus, setEditingStatus] = useState("");
+//   const [statusReason, setStatusReason] = useState("");
+//   const [showReasonField, setShowReasonField] = useState(false);
+  
+//   // State to store combined status options for the current application being edited
+//   const [combinedStatusOptions, setCombinedStatusOptions] = useState([]);
+
+//   // Modal state for staff assignment
+//   const [isModalOpen, setIsModalOpen] = useState(false);
+//   const [isStatusHistoryModalOpen, setIsStatusHistoryModalOpen] = useState(false);
+//   const [selectedApplication, setSelectedApplication] = useState(null);
+//   const [staffMembers, setStaffMembers] = useState([]);
+//   const [filteredStaffMembers, setFilteredStaffMembers] = useState([]);
+//   const [staffLoading, setStaffLoading] = useState(false);
+
+//   // Updated state for multiple remarks functionality
+//   const [isRemarkModalOpen, setIsRemarkModalOpen] = useState(false);
+//   const [newRemarkText, setNewRemarkText] = useState("");
+//   const [isViewRemarksModalOpen, setIsViewRemarksModalOpen] = useState(false);
+//   const [editingRemarkId, setEditingRemarkId] = useState(null);
+
+//   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
+//   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
+
+//   // Stats counters for dashboard
+//   const [stats, setStats] = useState({
+//     total: 0,
+//     unassigned: 0,
+//     inProgress: 0,
+//     completed: 0
+//   });
+
+//   // Fetch all applications
+//   const fetchApplications = async () => {
+//     try {
+//       setLoading(true);
+//       const response = await fetch(`${API_BASE_URL}/read`);
+      
+//       if (!response.ok) {
+//         throw new Error(`Failed to fetch applications: ${response.status}`);
+//       }
+      
+//       const data = await response.json();
+      
+//       // Initialize remarks array if it doesn't exist
+//       const processedData = data.map(app => ({
+//         ...app,
+//         remarks: app.remarks || []
+//       }));
+      
+//       setApplications(processedData);
+      
+//       // Calculate stats
+//       const unassignedApps = processedData.filter(app => !app.staff || app.staff === "Not Assigned").length;
+//       const inProgressApps = processedData.filter(app => {
+//         const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
+//         return status === "In Progress";
+//       }).length;
+      
+//       const completedApps = processedData.filter(app => {
+//         const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
+//         return status === "Completed";
+//       }).length;
+      
+//       setStats({
+//         total: processedData.length,
+//         unassigned: unassignedApps,
+//         inProgress: inProgressApps,
+//         completed: completedApps
+//       });
+      
+//     } catch (err) {
+//       console.error("Error fetching applications:", err);
+//       setError("Failed to load applications. Please try again.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Fetch all staff members
+//   const fetchStaffMembers = async () => {
+//     try {
+//       setStaffLoading(true);
+//       const response = await fetch(STAFF_API_URL);
+      
+//       if (!response.ok) {
+//         throw new Error(`Failed to fetch staff members: ${response.status}`);
+//       }
+      
+//       const data = await response.json();
+//       if (data && data.data && Array.isArray(data.data)) {
+//         setStaffMembers(data.data.map(staff => ({
+//           id: staff._id,
+//           name: staff.name,
+//           username: staff.username,
+//           contactNo: staff.contactNo,
+//           location: staff.location,
+//           serviceGroups: staff.serviceGroups || [],
+//           status: "Available"
+//         })));
+//       } else {
+//         throw new Error("Invalid staff data format");
+//       }
+//     } catch (err) {
+//       console.error("Error fetching staff members:", err);
+//       setStaffMembers([
+//         { id: 1, name: "John Doe", status: "Available", serviceGroups: [] },
+//         { id: 2, name: "Sarah Smith", status: "Busy", serviceGroups: [] },
+//         { id: 3, name: "Meera Shah", status: "Available", serviceGroups: [] },
+//         { id: 4, name: "Alex Johnson", status: "Available", serviceGroups: [] }
+//       ]);
+//     } finally {
+//       setStaffLoading(false);
+//     }
+//   };
+
+//   // Filter staff based on application service
+//   const filterStaffForApplication = (application) => {
+//     if (!application || !application.service) return staffMembers;
+
+//     const serviceName = typeof application.service === 'object' 
+//       ? application.service.name 
+//       : application.service;
+
+//     if (!serviceName) return staffMembers;
+
+//     const filtered = staffMembers.filter(staff => {
+//       if (!staff.serviceGroups || !Array.isArray(staff.serviceGroups)) return false;
+//       return staff.serviceGroups.some(group => 
+//         group.serviceName === serviceName || 
+//         group.serviceName === serviceName.trim()
+//       );
+//     });
+
+//     return filtered.length > 0 ? filtered : staffMembers;
+//   };
+
+//   // Update application status
+//   const updateStatus = async (id, newStatus, reason = "") => {
+//     try {
+//       const statusDetails = combinedStatusOptions.find(option => option.name === newStatus);
+//       if (!statusDetails) throw new Error("Invalid status selected");
+      
+//       const currentApp = applications.find(app => app._id === id);
+//       if (!currentApp) throw new Error("Application not found");
+      
+//       const updatePayload = {
+//         ...currentApp,
+//         initialStatus: [{
+//           name: newStatus,
+//           hexcode: statusDetails.hexcode,
+//           askreason: statusDetails.askreason,
+//           reason: reason,
+//           updatedAt: new Date()
+//         }]
+//       };
+
+//       const response = await fetch(`${API_BASE_URL}/update/${id}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(updatePayload),
+//       });
+      
+//       if (!response.ok) throw new Error(`Failed to update status: ${response.status}`);
+      
+//       const updatedApplication = await response.json();
+      
+//       setApplications(applications.map(app => 
+//         app._id === id ? { 
+//           ...app, 
+//           ...updatedApplication,
+//           initialStatus: updatedApplication.initialStatus || app.initialStatus
+//         } : app
+//       ));
+//       fetchApplications();
+      
+//       setEditingStatusId(null);
+//       setEditingStatus("");
+//       setStatusReason("");
+//       setShowReasonField(false);
+//       setCombinedStatusOptions([]);
+      
+//     } catch (err) {
+//       console.error("Error updating status:", err);
+//       alert("Failed to update status. Please try again.");
+//     }
+//   };
+
+//   // Update staff assignment
+//   const updateAssignment = async (applicationId, staffName) => {
+//     try {
+//       const response = await fetch(`${API_BASE_URL}/update/${applicationId}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ 
+//           staff: staffName 
+//         }),
+//       });
+      
+//       if (!response.ok) throw new Error(`Failed to update staff assignment: ${response.status}`);
+      
+//       const updatedApplication = await response.json();
+//       console.log(updatedApplication)
+//       setApplications(applications.map(app => 
+//         app._id === updatedApplication._id ? updatedApplication : app
+//       ));
+//       fetchApplications()
+//       setIsModalOpen(false);
+//       setSelectedApplication(null);
+      
+//     } catch (err) {
+//       console.error("Error updating staff assignment:", err);
+//       alert("Failed to update staff assignment. Please try again.");
+//     }
+//   };
+  
+//   // Add a new remark to application
+//   const addRemark = async () => {
+//     if (!selectedApplication || !newRemarkText.trim()) {
+//       alert("Please enter a remark");
+//       return;
+//     }
+
+//     try {
+//       const currentApp = applications.find(app => app._id === selectedApplication._id);
+//       if (!currentApp) throw new Error("Application not found");
+      
+//       // Create a new remark object
+//       const newRemark = {
+//         id: Date.now().toString(), // Generate a temporary ID
+//         text: newRemarkText,
+//         createdAt: new Date().toISOString(),
+//         createdBy: "Staff Manager" // You can replace with actual user info
+//       };
+      
+//       // Get existing remarks or initialize empty array
+//       const existingRemarks = currentApp.remarks || [];
+      
+//       // Update with new remarks array including the new remark
+//       const updatePayload = {
+//         remarks: [...existingRemarks, newRemark]
+//       };
+
+//       const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(updatePayload),
+//       });
+      
+//       if (!response.ok) throw new Error(`Failed to add remark: ${response.status}`);
+      
+//       const updatedApplication = await response.json();
+      
+//       setApplications(applications.map(app => 
+//         app._id === updatedApplication._id ? {
+//           ...app,
+//           ...updatedApplication,
+//           remarks: updatedApplication.remarks || []
+//         } : app
+//       ));
+      
+//       fetchApplications();
+      
+//       setIsRemarkModalOpen(false);
+//       setNewRemarkText("");
+      
+//     } catch (err) {
+//       console.error("Error adding remark:", err);
+//       alert("Failed to add remark. Please try again.");
+//     }
+//   };
+  
+//   // Update an existing remark
+//   const updateRemark = async (remarkId, newText) => {
+//     if (!selectedApplication || !newText.trim()) {
+//       alert("Please enter a remark");
+//       return;
+//     }
+
+//     try {
+//       const currentApp = applications.find(app => app._id === selectedApplication._id);
+//       if (!currentApp) throw new Error("Application not found");
+      
+//       // Get existing remarks
+//       const existingRemarks = currentApp.remarks || [];
+      
+//       // Update the specific remark
+//       const updatedRemarks = existingRemarks.map(remark => 
+//         remark.id === remarkId ? { 
+//           ...remark, 
+//           text: newText,
+//           updatedAt: new Date().toISOString()
+//         } : remark
+//       );
+      
+//       const updatePayload = {
+//         remarks: updatedRemarks
+//       };
+
+//       const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(updatePayload),
+//       });
+      
+//       if (!response.ok) throw new Error(`Failed to update remark: ${response.status}`);
+      
+//       const updatedApplication = await response.json();
+      
+//       setApplications(applications.map(app => 
+//         app._id === updatedApplication._id ? {
+//           ...app,
+//           ...updatedApplication,
+//           remarks: updatedApplication.remarks || []
+//         } : app
+//       ));
+      
+//       fetchApplications();
+      
+//       setEditingRemarkId(null);
+//       setNewRemarkText("");
+      
+//     } catch (err) {
+//       console.error("Error updating remark:", err);
+//       alert("Failed to update remark. Please try again.");
+//     }
+//   };
+  
+//   // Delete a remark
+//   const deleteRemark = async (remarkId) => {
+//     if (!selectedApplication) return;
+    
+//     if (!confirm("Are you sure you want to delete this remark?")) {
+//       return;
+//     }
+
+//     try {
+//       const currentApp = applications.find(app => app._id === selectedApplication._id);
+//       if (!currentApp) throw new Error("Application not found");
+      
+//       // Get existing remarks
+//       const existingRemarks = currentApp.remarks || [];
+      
+//       // Filter out the remark to delete
+//       const updatedRemarks = existingRemarks.filter(remark => remark.id !== remarkId);
+      
+//       const updatePayload = {
+//         remarks: updatedRemarks
+//       };
+
+//       const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(updatePayload),
+//       });
+      
+//       if (!response.ok) throw new Error(`Failed to delete remark: ${response.status}`);
+      
+//       const updatedApplication = await response.json();
+      
+//       setApplications(applications.map(app => 
+//         app._id === updatedApplication._id ? {
+//           ...app,
+//           ...updatedApplication,
+//           remarks: updatedApplication.remarks || []
+//         } : app
+//       ));
+      
+//       fetchApplications();
+      
+//     } catch (err) {
+//       console.error("Error deleting remark:", err);
+//       alert("Failed to delete remark. Please try again.");
+//     }
+//   };
+
+//   const handleAssignStaff = (application) => {
+//     setSelectedApplication(application);
+//     setFilteredStaffMembers(filterStaffForApplication(application));
+//     setIsModalOpen(true);
+//   };
+
+//   const handleViewStatusHistory = (application) => {
+//     setSelectedApplication(application);
+//     setIsStatusHistoryModalOpen(true);
+//   };
+
+//   const handleAddRemark = (application) => {
+//     setSelectedApplication(application);
+//     setNewRemarkText("");
+//     setIsRemarkModalOpen(true);
+//   };
+  
+//   const handleViewRemarks = (application) => {
+//     setSelectedApplication(application);
+//     setIsViewRemarksModalOpen(true);
+//   };
+  
+//   const handleEditRemark = (remarkId, remarkText) => {
+//     setEditingRemarkId(remarkId);
+//     setNewRemarkText(remarkText);
+//   };
+
+//   const getServiceStatusOptions = (application) => {
+//     if (!application.service || !application.service.status || !Array.isArray(application.service.status)) {
+//       return [];
+//     }
+//     return application.service.status;
+//   };
+
+//   const startEditStatus = (application) => {
+//     const currentStatusName = application.initialStatus?.[0]?.name || "Initiated";
+//     const serviceStatusOptions = getServiceStatusOptions(application);
+    
+//     const allStatusOptions = [...serviceStatusOptions];
+    
+//     setCombinedStatusOptions(allStatusOptions);
+//     setEditingStatusId(application._id);
+//     setEditingStatus(currentStatusName);
+    
+//     const statusOption = allStatusOptions.find(option => option.name === currentStatusName);
+//     setShowReasonField(statusOption?.askreason || false);
+//   };
+
+//   const cancelEditStatus = () => {
+//     setEditingStatusId(null);
+//     setEditingStatus("");
+//     setStatusReason("");
+//     setShowReasonField(false);
+//     setCombinedStatusOptions([]);
+//   };
+
+//   const handleStatusChange = (e) => {
+//     const newStatus = e.target.value;
+//     setEditingStatus(newStatus);
+//     const statusOption = combinedStatusOptions.find(option => option.name === newStatus);
+//     setShowReasonField(statusOption?.askreason || false);
+//   };
+
+//   const saveStatus = (id) => {
+//     updateStatus(id, editingStatus, statusReason);
+//   };
+
+//   // Get the latest remark for display in the table
+//   const getLatestRemark = (application) => {
+//     if (!application.remarks || !Array.isArray(application.remarks) || application.remarks.length === 0) {
+//       return application.remark || null; // Fallback to old remark field if exists
+//     }
+    
+//     // Sort remarks by date and return the latest one
+//     const sortedRemarks = [...application.remarks].sort((a, b) => 
+//       new Date(b.createdAt) - new Date(a.createdAt)
+//     );
+    
+//     return sortedRemarks[0];
+//   };
+
+//   useEffect(() => {
+//     fetchApplications();
+//     fetchStaffMembers();
+//   }, []);
+  
+//   const getCurrentStatus = (application) => {
+//     return application.initialStatus?.[0]?.name || "Initiated";
+//   };
+  
+//   return (
+//     <div className="min-h-screen bg-gray-50">
+//       <header className="bg-white shadow">
+//         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+//           <h1 className="text-3xl font-bold text-gray-900">Staff Manager Dashboard</h1>
+//         </div>
+//       </header>
+
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+//         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+//           <StatCard 
+//             title="Total Applications" 
+//             value={stats.total} 
+//             icon={<FiFile className="h-6 w-6 text-blue-500" />}
+//             color="bg-blue-100"
+//           />
+//           <StatCard 
+//             title="Unassigned Applications" 
+//             value={stats.unassigned} 
+//             icon={<FiUser className="h-6 w-6 text-red-500" />}
+//             color="bg-red-100"
+//           />
+//           <StatCard 
+//             title="In Progress" 
+//             value={stats.inProgress} 
+//             icon={<FiClock className="h-6 w-6 text-yellow-500" />}
+//             color="bg-yellow-100"
+//           />
+//           <StatCard 
+//             title="Completed Applications" 
+//             value={stats.completed} 
+//             icon={<FiCheckCircle className="h-6 w-6 text-green-500" />}
+//             color="bg-green-100"
+//           />
+//         </div>
+
+//         <div className="mt-8">
+//           <div className="flex justify-between items-center mb-4">
+//             <h2 className="text-xl font-semibold text-gray-900">All Applications</h2>
+//             <div className="flex items-center space-x-4">
+//               <span className="text-gray-600">Total: {applications.length}</span>
+//               <button 
+//                 onClick={fetchApplications}
+//                 className="flex items-center bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1 rounded"
+//               >
+//                 <FiRefreshCw className="mr-1" /> Refresh
+//               </button>
+//             </div>
+//           </div>
+
+//           {error && (
+//             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+//               {error}
+//             </div>
+//           )}
+
+//           {loading ? (
+//             <div className="text-center py-10">
+//               <FiRefreshCw className="animate-spin h-8 w-8 mx-auto text-gray-500" />
+//               <p className="mt-2 text-gray-500">Loading applications...</p>
+//             </div>
+//           ) : (
+//             <div className="bg-white shadow rounded-lg overflow-hidden">
+//               <div className="overflow-x-auto">
+//                 <table className="min-w-full divide-y divide-gray-200">
+//                   <thead className="bg-gray-50">
+//                     <tr>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr.</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant Name</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+//                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+//                     </tr>
+//                   </thead>
+//                   <tbody className="bg-white divide-y divide-gray-200">
+//                     {applications.length === 0 ? (
+//                       <tr>
+//                         <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
+//                           No applications found
+//                         </td>
+//                       </tr>
+//                     ) : (
+//                       applications.slice().reverse().map((application, index) => {
+//                         const latestRemark = getLatestRemark(application);
+//                         const remarkCount = (application.remarks && Array.isArray(application.remarks)) 
+//                           ? application.remarks.length 
+//                           : (application.remark ? 1 : 0);
+                        
+//                         return (
+//                           <tr key={index} className="hover:bg-gray-50">
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                               {new Date(application.date).toLocaleDateString()}
+//                             </td>
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
+//                             <td className="px-6 py-4 whitespace-nowrap">
+//                               {editingStatusId === application._id ? (
+//                                 <div className="flex flex-col space-y-2">
+//                                   <div className="flex items-center space-x-2">
+//                                     <select
+//                                       value={editingStatus}
+//                                       onChange={handleStatusChange}
+//                                       className="text-xs border border-gray-300 rounded p-1"
+//                                     >
+//                                       {combinedStatusOptions.map(option => (
+//                                         <option key={option.name} value={option.name}>
+//                                           {option.name}
+//                                         </option>
+//                                       ))}
+//                                     </select>
+//                                     <button 
+//                                       onClick={() => saveStatus(application._id)}
+//                                       className="text-green-600 hover:text-green-900"
+//                                     >
+//                                       <FiSave className="h-4 w-4" />
+//                                     </button>
+//                                     <button 
+//                                       onClick={cancelEditStatus}
+//                                       className="text-red-600 hover:text-red-900"
+//                                     >
+//                                       <FiX className="h-4 w-4" />
+//                                     </button>
+//                                   </div>
+                                  
+//                                   {showReasonField && (
+//                                     <input
+//                                       type="text"
+//                                       placeholder="Enter reason"
+//                                       value={statusReason}
+//                                       onChange={(e) => setStatusReason(e.target.value)}
+//                                       className="text-xs border border-gray-300 rounded p-1 w-full"
+//                                     />
+//                                   )}
+//                                 </div>
+//                               ) : (
+//                                 <div className="flex items-center space-x-2">
+//                                   <StatusBadge 
+//                                     status={getCurrentStatus(application)} 
+//                                     hexcode={application.initialStatus?.[0]?.hexcode} 
+//                                   />
+//                                   <button 
+//                                     onClick={() => startEditStatus(application)}
+//                                     className="text-indigo-600 hover:text-indigo-900"
+//                                     title="Edit Status"
+//                                   >
+//                                     <FiEdit className="h-4 w-4" />
+//                                   </button>
+//                                   {(application.statusHistory?.length > 0) && (
+//                                     <button
+//                                       onClick={() => handleViewStatusHistory(application)}
+//                                       className="text-gray-600 hover:text-gray-900"
+//                                       title="View Status History"
+//                                     >
+//                                       <FiList className="h-4 w-4" />
+//                                     </button>
+//                                   )}
+//                                 </div>
+//                               )}
+//                             </td>
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                               {typeof application.service === 'object' 
+//                                 ? application.service.name || JSON.stringify(application.service) 
+//                                 : application.service}
+//                             </td>
+//                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+//                               ₹{typeof application.amount === 'number' ? application.amount : 0}
+//                             </td>
+//                             <td className="px-6 py-4 whitespace-nowrap">
+//                               <div className="flex items-center space-x-2">
+//                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+//                                   ${!application.staff || application.staff === "Not Assigned" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
+//                                   {application.staff || "Not Assigned"}
+//                                 </span>
+//                                 <button 
+//                                   onClick={() => handleAssignStaff(application)}
+//                                   className="text-indigo-600 hover:text-indigo-900"
+//                                 >
+//                                   <FiEdit className="h-4 w-4" />
+//                                 </button>
+//                               </div>
+//                             </td>
+//                             <td className="px-6 py-4 whitespace-nowrap">
+//                               <div className="flex items-center space-x-2">
+//                                 {latestRemark ? (
+//                                   <div className="flex items-center space-x-2">
+//                                     <div className="max-w-xs truncate text-sm text-gray-500" 
+//                                          title={typeof latestRemark === 'string' ? latestRemark : latestRemark.text}>
+//                                       {typeof latestRemark === 'string' ? latestRemark : latestRemark.text}
+//                                     </div>
+//                                     {remarkCount > 1 && (
+//                                       <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+//                                         +{remarkCount - 1}
+//                                       </span>
+//                                     )}
+//                                   </div>
+//                                 ) : (
+//                                   <span className="text-xs text-gray-400">No remarks</span>
+//                                 )}
+//                                 <div className="flex space-x-1">
+//                                   <button 
+//                                     onClick={() => handleAddRemark(application)}
+//                                     className="text-green-600 hover:text-green-900"
+//                                     title="Add Remark"
+//                                   >
+//                                     <FiPlus className="h-4 w-4" />
+//                                   </button>
+//                                   {remarkCount > 0 && (
+//                                     <button 
+//                                       onClick={() => handleViewRemarks(application)}
+//                                       className="text-blue-600 hover:text-blue-900"
+//                                       title="View All Remarks"
+//                                     >
+//                                       <FiMessageSquare className="h-4 w-4" />
+//                                     </button>
+//                                   )}
+//                                 </div>
+//                               </div>
+//                             </td>
+//                           </tr>
+//                         );
+//                       })
+//                     )}
+//                   </tbody>
+//                 </table>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+
+//         {/* Staff Assignment Modal */}
+//         {isModalOpen && selectedApplication && (
+//           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+//             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+//               <h3 className="text-lg font-medium text-gray-900 mb-2">
+//                 Assign Staff to Application
+//               </h3>
+              
+//               <div className="mb-4 bg-blue-50 p-3 rounded">
+//                 <p className="text-sm text-blue-800">
+//                   <span className="font-medium">Service Required:</span> {
+//                     typeof selectedApplication.service === 'object' 
+//                       ? selectedApplication.service.name 
+//                       : selectedApplication.service
+//                   }
+//                 </p>
+//                 <p className="text-xs text-gray-500 mt-1">
+//                   Showing staff members who can provide this service
+//                 </p>
+//               </div>
+              
+//               <div className="space-y-3">
+//                 {staffLoading ? (
+//                   <div className="text-center py-4">
+//                     <FiRefreshCw className="animate-spin h-5 w-5 mx-auto text-gray-500" />
+//                     <p className="mt-2 text-sm text-gray-500">Loading staff members...</p>
+//                   </div>
+//                 ) : filteredStaffMembers.length === 0 ? (
+//                   <div className="text-center py-4 text-gray-500">
+//                     No staff members available for this service
+//                   </div>
+//                 ) : (
+//                   filteredStaffMembers.map(staff => (
+//                     <div 
+//                       key={staff.id} 
+//                       className="flex items-center justify-between border rounded p-3 hover:bg-gray-50"
+//                     >
+//                       <div>
+//                         <p className="font-medium text-gray-800">{staff.name}</p>
+//                         <p className="text-xs text-gray-500">{staff.username || 'No username'}</p>
+//                       </div>
+//                       <div className="flex items-center">
+//                         <span className={`inline-flex px-2 py-1 text-xs rounded-full mr-2 ${
+//                           staff.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+//                         }`}>
+//                           {staff.status}
+//                         </span>
+//                         <button
+//                           onClick={() => updateAssignment(selectedApplication._id, staff.name)}
+//                           className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
+//                         >
+//                           Assign
+//                         </button>
+//                       </div>
+//                     </div>
+//                   ))
+//                 )}
+//               </div>
+              
+//               <div className="mt-5 flex justify-end">
+//                 <button
+//                   onClick={() => setIsModalOpen(false)}
+//                   className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+//                 >
+//                   Cancel
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Status History Modal */}
+//         {isStatusHistoryModalOpen && selectedApplication && (
+//           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+//             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+//               <h3 className="text-lg font-medium text-gray-900 mb-4">
+//                 Status History for {selectedApplication.name}
+//               </h3>
+              
+//               <div className="max-h-96 overflow-y-auto">
+//                 <ul className="space-y-3">
+//                   {selectedApplication.statusHistory?.map((status, index) => (
+//                     <li key={index} className="border-l-2 pl-3 py-2" style={{ borderColor: status.hexcode || '#888' }}>
+//                       <div className="flex items-start justify-between">
+//                         <div>
+//                           <p className="font-medium text-gray-800">{status.name}</p>
+//                           {status.reason && (
+//                             <p className="text-sm text-gray-600 mt-1">Reason: {status.reason}</p>
+//                           )}
+//                         </div>
+//                         <span className="text-xs text-gray-500">
+//                           {new Date(status.updatedAt).toLocaleDateString()} 
+//                           {new Date(status.updatedAt).toLocaleTimeString()}
+//                         </span>
+//                       </div>
+//                     </li>
+//                   ))}
+                  
+//                   {(!selectedApplication.statusHistory || selectedApplication.statusHistory.length === 0) && (
+//                     <li className="text-center py-4 text-gray-500">
+//                       No status history available
+//                     </li>
+//                   )}
+//                 </ul>
+//               </div>
+              
+//               <div className="mt-5 flex justify-end">
+//                 <button
+//                   onClick={() => setIsStatusHistoryModalOpen(false)}
+//                   className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+//                 >
+//                   Close
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Add Remark Modal */}
+//         {isRemarkModalOpen && selectedApplication && (
+//           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+//             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+//               <h3 className="text-lg font-medium text-gray-900 mb-4">
+//                 {editingRemarkId ? 'Edit Remark' : 'Add Remark'}
+//               </h3>
+              
+//               <div className="mb-4">
+//                 <label className="block text-sm font-medium text-gray-700 mb-2">
+//                   Remark for {selectedApplication.name}
+//                 </label>
+//                 <textarea
+//                   value={newRemarkText}
+//                   onChange={(e) => setNewRemarkText(e.target.value)}
+//                   rows={4}
+//                   className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+//                   placeholder="Enter your remark here..."
+//                 />
+//               </div>
+              
+//               <div className="flex justify-end space-x-3">
+//                 <button
+//                   onClick={() => {
+//                     setIsRemarkModalOpen(false);
+//                     setEditingRemarkId(null);
+//                     setNewRemarkText("");
+//                   }}
+//                   className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+//                 >
+//                   Cancel
+//                 </button>
+//                 <button
+//                   onClick={() => {
+//                     if (editingRemarkId) {
+//                       updateRemark(editingRemarkId, newRemarkText);
+//                     } else {
+//                       addRemark();
+//                     }
+//                   }}
+//                   className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+//                   disabled={!newRemarkText.trim()}
+//                 >
+//                   {editingRemarkId ? 'Update' : 'Add'} Remark
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* View Remarks Modal */}
+//         {isViewRemarksModalOpen && selectedApplication && (
+//           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+//             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+//               <h3 className="text-lg font-medium text-gray-900 mb-4">
+//                 Remarks for {selectedApplication.name}
+//               </h3>
+              
+//               <div className="max-h-96 overflow-y-auto">
+//                 {selectedApplication.remarks && selectedApplication.remarks.length > 0 ? (
+//                   <ul className="space-y-4">
+//                     {selectedApplication.remarks.map((remark, index) => (
+//                       <li key={index} className="border-b border-gray-100 pb-3">
+//                         <div className="flex items-start justify-between">
+//                           <div className="flex-1">
+//                             <p className="text-sm text-gray-800">{remark.text}</p>
+//                             <div className="flex items-center mt-1">
+//                               <span className="text-xs text-gray-500">
+//                                 {remark.createdBy || 'Staff'} - {new Date(remark.createdAt).toLocaleDateString()}
+//                               </span>
+//                               {remark.updatedAt && (
+//                                 <span className="text-xs text-gray-400 ml-2">
+//                                   (Updated: {new Date(remark.updatedAt).toLocaleDateString()})
+//                                 </span>
+//                               )}
+//                             </div>
+//                           </div>
+//                           <div className="flex space-x-2 ml-2">
+//                             <button
+//                               onClick={() => handleEditRemark(remark.id, remark.text)}
+//                               className="text-blue-600 hover:text-blue-900"
+//                             >
+//                               <FiEdit2 className="h-4 w-4" />
+//                             </button>
+//                             <button
+//                               onClick={() => deleteRemark(remark.id)}
+//                               className="text-red-600 hover:text-red-900"
+//                             >
+//                               <FiTrash2 className="h-4 w-4" />
+//                             </button>
+//                           </div>
+//                         </div>
+//                       </li>
+//                     ))}
+//                   </ul>
+//                 ) : selectedApplication.remark ? (
+//                   // Display old remark format if available
+//                   <div className="border-b border-gray-100 pb-3">
+//                     <p className="text-sm text-gray-800">{selectedApplication.remark}</p>
+//                   </div>
+//                 ) : (
+//                   <div className="text-center py-4 text-gray-500">
+//                     No remarks available
+//                   </div>
+//                 )}
+//               </div>
+              
+//               <div className="mt-5 flex justify-between">
+//                 <button
+//                   onClick={() => handleAddRemark(selectedApplication)}
+//                   className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
+//                 >
+//                   <FiPlus className="mr-1" /> Add New
+//                 </button>
+//                 <button
+//                   onClick={() => {
+//                     setIsViewRemarksModalOpen(false);
+//                     setEditingRemarkId(null);
+//                   }}
+//                   className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+//                 >
+//                   Close
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // Helper components
+// function StatCard({ title, value, icon, color }) {
+//   return (
+//     <div className={`${color} overflow-hidden shadow rounded-lg`}>
+//       <div className="p-5">
+//         <div className="flex items-center">
+//           <div className="flex-shrink-0">
+//             {icon}
+//           </div>
+//           <div className="ml-5 w-0 flex-1">
+//             <dl>
+//               <dt className="text-sm font-medium text-gray-500 truncate">
+//                 {title}
+//               </dt>
+//               <dd>
+//                 <div className="text-lg font-medium text-gray-900">
+//                   {value}
+//                 </div>
+//               </dd>
+//             </dl>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// function StatusBadge({ status, hexcode }) {
+//   // Map status to colors if no hexcode provided
+//   const getStatusColor = () => {
+//     if (hexcode) return hexcode;
+    
+//     switch (status) {
+//       case 'Initiated':
+//         return '#3B82F6'; // blue-500
+//       case 'In Progress':
+//         return '#F59E0B'; // amber-500
+//       case 'Completed':
+//         return '#10B981'; // emerald-500
+//       case 'Rejected':
+//         return '#EF4444'; // red-500
+//       case 'On Hold':
+//         return '#6B7280'; // gray-500
+//       default:
+//         return '#3B82F6'; // blue-500
+//     }
+//   };
+
+//   const bgColor = getStatusColor();
+  
+//   // Calculate lighter background color for the badge
+//   const getBackgroundColor = () => {
+//     // Create a lighter version for background
+//     const hex = bgColor.replace('#', '');
+//     const r = parseInt(hex.substring(0, 2), 16);
+//     const g = parseInt(hex.substring(2, 4), 16);
+//     const b = parseInt(hex.substring(4, 6), 16);
+    
+//     // Create a lighter, more transparent version
+//     return `rgba(${r}, ${g}, ${b}, 0.15)`;
+//   };
+
+//   return (
+//     <span 
+//       className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+//       style={{ 
+//         backgroundColor: getBackgroundColor(),
+//         color: bgColor,
+//         borderColor: bgColor,
+//         borderWidth: '1px',
+//       }}
+//     >
+//       {status}
+//     </span>
+//   );
+// }

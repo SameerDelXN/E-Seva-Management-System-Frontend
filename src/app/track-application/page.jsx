@@ -258,20 +258,23 @@ export default function TrackApplication() {
                       >
                         <div className="flex justify-between items-start flex-wrap">
                           <div>
-                            <h3 className="font-medium text-gray-800">{app.name}</h3>
-                            <p className="text-gray-500 text-sm mt-1">Service: {app.service?.name || 'N/A'}</p>
-                            <p className="text-gray-500 text-sm">
-                              Appointment: {formatDate(app.date || app.createdAt)}
-                            </p>
-                            {app.delivery && (
-                              <p className="text-gray-500 text-sm">
-                                Expected Delivery: {app.delivery}
-                              </p>
-                            )}
-                            {app.amount > 0 && (
-                              <p className="text-gray-600 text-sm mt-2">Amount: ₹{app.amount}</p>
-                            )}
-                          </div>
+  <h3 className="font-medium text-gray-800">{app.name}</h3>
+  <p className="text-gray-500 text-sm mt-1">Service: {app.service?.name || 'N/A'}</p>
+  <p className="text-gray-500 text-sm">
+    Appointment: {formatDate(app.date || app.createdAt)}
+  </p>
+  {app.delivery && (
+    <p className="text-gray-500 text-sm">
+      Expected Delivery: {app.delivery}
+    </p>
+  )}
+  {/*
+  {app.amount > 0 && (
+    <p className="text-gray-600 text-sm mt-2">Amount: ₹{app.amount}</p>
+  )}
+  */}
+</div>
+
                           <div className="flex flex-col items-end">
                             {app?.initialStatus ? (
                               <span 
@@ -482,8 +485,8 @@ export default function TrackApplication() {
                       </div>
                     </div>
                   )}
-
-                  {/* Provider Info */}
+                  
+                  {/* 
                   <div className="mb-6">
                     <h3 className="font-medium text-gray-800 mb-3 flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -511,7 +514,7 @@ export default function TrackApplication() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Status History (if available) */}
                   {selectedApplication.statusHistory && selectedApplication.statusHistory.length > 0 && (
