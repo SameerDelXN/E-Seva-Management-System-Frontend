@@ -652,7 +652,7 @@ export default function StaffDashboard() {
   const [currentRemark, setCurrentRemark] = useState("");
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
 
-  const API_BASE_URL = "http://localhost:3001/api/application";
+  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const globalStatusOptions = [];
   
   // Stats counters for dashboard
