@@ -47,7 +47,10 @@ export default function ServiceGroupsUI() {
     serviceId: '', // Add serviceId field to store the _id
     staff: 'Not Assigned',
     amount: '',
-    document: null,
+    document: [{
+      "name":null,
+      "view":null
+    }],
     receipt: null
   });
 
@@ -120,15 +123,18 @@ export default function ServiceGroupsUI() {
 
   // Handle file changes
   const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    if (files && files.length > 0) {
-      setFormData({
-        ...formData,
-        [name]: files[0].name
-      });
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prevFormData => ({
+        ...prevFormData,
+        document: [{
+          name: file.name,
+          view: URL.createObjectURL(file)
+        }]
+      }));
     }
   };
-
+  
   // Get price based on agent's plan
   const getPriceForAgentPlan = (service) => {
     console.log("price service", service);
@@ -211,7 +217,7 @@ export default function ServiceGroupsUI() {
     };
     
     try {
-      const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
+      const response = await fetch("http://localhost:3001/api/application/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,7 +271,10 @@ export default function ServiceGroupsUI() {
           serviceId: '',
           staff: 'Not Assigned',
           amount: '',
-          document: null,
+          document: {
+            "name":null,
+            "value":null
+          },
           receipt: null
         });
         setSubmissionStatus(null);
@@ -710,16 +719,16 @@ export default function ServiceGroupsUI() {
                       <label className="block w-full relative">
                         <span className="sr-only">Choose file</span>
                         <input 
-                          type="file"
-                          name="document"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
+  type="file"
+  name="document"
+  onChange={handleFileChange}
+  className="hidden"
+/>
                         <div className="flex items-center justify-between border border-gray-300 rounded-md py-2 px-3 text-sm cursor-pointer bg-white hover:bg-gray-50">
                           <div className="flex items-center">
                             <FiFile className="mr-2 text-gray-400" />
                             <span className="text-gray-500">
-                              {formData.document ? formData.document : 'Select document file'}
+                              {formData.document.name ? formData.document.name : 'Select document file'}
                             </span>
                           </div>
                           <FiUpload className="text-gray-400" />
