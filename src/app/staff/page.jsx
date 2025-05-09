@@ -626,7 +626,6 @@
 //     </div>
 //   );
 // }
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -651,6 +650,14 @@ export default function StaffDashboard() {
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [currentRemark, setCurrentRemark] = useState("");
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+
+  // Add new states for view modal and document remarks
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [showDocumentRemarkModal, setShowDocumentRemarkModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documentRemarks, setDocumentRemarks] = useState([]);
+  const [newDocumentRemark, setNewDocumentRemark] = useState("");
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const globalStatusOptions = [];
@@ -918,11 +925,92 @@ export default function StaffDashboard() {
     alert("Status history feature would open here");
   };
 
+  // Function to open view modal
+  const openViewModal = (application) => {
+    setSelectedApplication(application);
+    setShowViewModal(true);
+  };
+
+  // Function to open document remark modal
+  const openDocumentRemarkModal = (document) => {
+    setSelectedDocument(document);
+    // Get the remark from the document
+    const doc = selectedApplication.document.find(d => d._id === document.id);
+    setDocumentRemarks(doc?.remark ? [doc.remark] : []);
+    setShowDocumentRemarkModal(true);
+  };
+
+  // Function to add document remark
+  const addDocumentRemark = async () => {
+    if (!newDocumentRemark.trim()) return;
+
+    try {
+      // Create new remark history entry
+      const newRemarkHistory = {
+        text: newDocumentRemark,
+        addedBy: session?.user?._id,
+        addedAt: new Date()
+      };
+
+      // Find the document in the application's document array and update its remark
+      const updatedDocuments = (selectedApplication?.document || []).map(doc => {
+        if (
+          doc?._id?.toString() === selectedDocument?.id?.toString() &&
+          newDocumentRemark !== undefined
+        ) {
+          return { ...doc, remark: newDocumentRemark };
+        }
+        return doc;
+      });
+      // Prepare the update payload
+      const updatePayload = {
+        ...selectedApplication,
+        document: updatedDocuments,
+        // Add to remark history
+        remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
+      };
+
+      const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update remarks');
+      }
+
+      const updatedApplication = await response.json();
+      
+      // Update local state
+      setApplications(applications.map(app => 
+        app._id === selectedApplication._id ? updatedApplication : app
+      ));
+
+      // Update the selected application state
+      setSelectedApplication(updatedApplication);
+
+      // Update document remarks in the modal
+      const updatedDoc = updatedDocuments.find(doc => doc._id === selectedDocument.id);
+      setDocumentRemarks([updatedDoc.remark]);
+
+      setNewDocumentRemark("");
+      
+      // Show success message
+      alert('Remark added successfully');
+    } catch (err) {
+      console.error("Error adding document remark:", err);
+      alert("Failed to add remark. Please try again.");
+    }
+  };
+
   // Load applications on component mount
   useEffect(() => {
     fetchApplications();
   }, []);
-
+  console.log("sele = ",selectedApplication)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1011,7 +1099,7 @@ export default function StaffDashboard() {
                       </tr>
                     ) : (
                       applications.slice().reverse().map((application, index) => (
-                        <tr className="hover:bg-gray-50">
+                        <tr key={application._id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
@@ -1115,11 +1203,11 @@ export default function StaffDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <button
-                              onClick={() => openRemarkModal(application)}
+                              onClick={() => openViewModal(application)}
                               className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded"
                             >
-                              <FiMessageSquare className="h-3 w-3 mr-1" /> 
-                              {application.remark ? "EDIT REMARK" : "ADD REMARK"}
+                              <FiEye className="h-3 w-3 mr-1" /> 
+                              VIEW DETAILS
                             </button>
                           </td>
                         </tr>
@@ -1182,6 +1270,239 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
+
+      {/* Add View Modal */}
+      {showViewModal && selectedApplication && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        Application Details
+                      </h3>
+                      <button
+                        onClick={() => setShowViewModal(false)}
+                        className="text-gray-400 hover:text-gray-500"
+                      >
+                        <FiX className="h-6 w-6" />
+                      </button>
+                    </div>
+                    
+                    {/* Applicant Information */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                        <h4 className="text-sm font-medium text-gray-500">Applicant Name</h4>
+                        <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.name}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                        <h4 className="text-sm font-medium text-gray-500">Application Date</h4>
+                        <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.date}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                        <h4 className="text-sm font-medium text-gray-500">Service</h4>
+                        <p className="mt-1 text-sm font-medium text-gray-900">
+                          {typeof selectedApplication.service === 'object' 
+                            ? selectedApplication.service.name 
+                            : selectedApplication.service}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                        <h4 className="text-sm font-medium text-gray-500">Status</h4>
+                        <div className="mt-1">
+                          <StatusBadge 
+                            status={getCurrentStatus(selectedApplication)} 
+                            hexcode={selectedApplication.initialStatus?.[0]?.hexcode} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Documents Section */}
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium text-gray-500 mb-3">Documents</h4>
+                      <div className="space-y-4">
+                        {selectedApplication.document && selectedApplication.document.length > 0 ? (
+                          selectedApplication.document.map((doc) => (
+                            <div key={doc._id} className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center space-x-3">
+                                  <div className="bg-indigo-100 p-2 rounded-lg">
+                                    <FiFile className="h-5 w-5 text-indigo-600" />
+                                  </div>
+                                  <div>
+                                    <h5 className="text-sm font-medium text-gray-900">{doc.name}</h5>
+                                    <p className="text-sm text-gray-500">
+                                      Uploaded on {new Date(selectedApplication.createdAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <button 
+                                    onClick={() => window.open(doc.view, '_blank')}
+                                    className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded"
+                                    title="View Document"
+                                  >
+                                    <FiEye className="h-3 w-3 mr-1" />
+                                    View
+                                  </button>
+                                  <button
+                                    onClick={() => openDocumentRemarkModal({ id: doc._id, name: doc.name })}
+                                    className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded"
+                                  >
+                                    <FiMessageSquare className="h-3 w-3 mr-1" />
+                                    Add Remark
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            <FiFile className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-gray-500">No documents uploaded yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Remark Modal */}
+      {showDocumentRemarkModal && selectedDocument && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-indigo-100 p-2 rounded-lg">
+                        <FiMessageSquare className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Remarks for {selectedDocument.name}
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Add and manage remarks for this document
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowDocumentRemarkModal(false);
+                        setSelectedDocument(null);
+                        setDocumentRemarks([]);
+                        setNewDocumentRemark("");
+                      }}
+                      className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    >
+                      <FiX className="h-6 w-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="px-6 py-4">
+                  {/* Existing Remarks */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Previous Remarks</h4>
+                    <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                      {selectedApplication.document && selectedApplication.document.length > 0 ? (
+                        selectedApplication.document.map((remark, index) => (
+                          <div key={index} className="bg-gray-50 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                            <div className="p-4">
+                              <div className="flex items-start space-x-3">
+                                
+                                <div className="flex-1 min-w-0">
+                                 
+                                  <p className="mt-1 text-sm text-gray-700">{remark.remark}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                          <FiMessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500">No remarks yet</p>
+                          <p className="text-sm text-gray-400 mt-1">Add your first remark below</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Add New Remark */}
+                  <div className="mt-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Remark</h4>
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <textarea
+                        className="w-full h-24 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
+                        placeholder="Type your remark here..."
+                        value={newDocumentRemark}
+                        onChange={(e) => setNewDocumentRemark(e.target.value)}
+                      ></textarea>
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white 
+                            ${newDocumentRemark.trim() 
+                              ? 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' 
+                              : 'bg-gray-400 cursor-not-allowed'}`}
+                          onClick={addDocumentRemark}
+                          disabled={!newDocumentRemark.trim()}
+                        >
+                          <FiMessageSquare className="h-4 w-4 mr-2" />
+                          Add Remark
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add custom scrollbar styles */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #a0aec0;
+        }
+      `}</style>
     </div>
   );
 }
