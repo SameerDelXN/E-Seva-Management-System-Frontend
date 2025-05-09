@@ -22,6 +22,9 @@
         |-- stamp.png
         |-- work-plan.png
     |-- next.svg
+    |-- sound
+        |-- notification.mp3
+        |-- notification.wav
     |-- vercel.svg
     |-- window.svg
 |-- README.md

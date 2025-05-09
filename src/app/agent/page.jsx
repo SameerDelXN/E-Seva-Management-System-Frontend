@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FiFile, FiPlus, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard } from 'react-icons/fi';
+import { FiFile,FiSave, FiPlus,FiPackage,FiClock, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard, FiDownload, FiTrash2 } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
-
+import axios from 'axios';
 export default function ServiceGroupsUI() {
   const { session } = useSession();
   const [serviceGroups, setServiceGroups] = useState([]);
@@ -24,7 +24,7 @@ export default function ServiceGroupsUI() {
     purchasePlan: session?.user?.purchasePlan // Extracted from session data
   };
   
-  // Form data state
+  // Form data state - Modified to handle multiple documents
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -47,11 +47,14 @@ export default function ServiceGroupsUI() {
     serviceId: '', // Add serviceId field to store the _id
     staff: 'Not Assigned',
     amount: '',
-    document: [{
-      "name":null,
-      "view":null
-    }],
-    receipt: null
+    // Changed from a single document to an array of documents
+    documents: [],
+    receipt: null,
+    additional: {
+      inputType: '',
+      label: '',
+      value: ''
+    }
   });
 
   useEffect(() => {
@@ -87,7 +90,6 @@ export default function ServiceGroupsUI() {
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   }
-
   // Fetch service groups
   useEffect(() => {
     const fetchServiceGroups = async () => {
@@ -113,26 +115,109 @@ export default function ServiceGroupsUI() {
   }, []);
 
   // Handle form input changes
-  const handleInputChange = (e) => {
+  const handleInputChange = (e,label) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-
-  // Handle file changes
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData(prevFormData => ({
-        ...prevFormData,
-        document: [{
-          name: file.name,
-          view: URL.createObjectURL(file)
-        }]
+  
+    // For nested fields like "additional.value"
+    if (name.includes('.')) {
+      const [parentKey, childKey] = name.split('.');
+      setFormData((prevData) => ({
+        ...prevData,
+        [parentKey]: {
+          ...prevData[parentKey],
+          [childKey]: value
+        }
+      }));
+      setFormData((prevData) => ({
+        ...prevData,
+        additional: {
+          ...prevData[parentKey],
+          label: label
+        }
+      }));
+      
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value
       }));
     }
+  };
+  
+  console.log(serviceGroups)
+  // Updated handle file change function to accept document type
+  const handleFileChange = (e, documentType,name) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (documentType === 'receipt') {
+      // Handle receipt upload
+      setFormData({
+        ...formData,
+        receipt: {
+          name: name,
+          file: file,
+          view: URL.createObjectURL(file)
+        }
+      });
+    } else {
+      // Handle document uploads
+      const newDocuments = [...formData.documents];
+      
+      // Check if this document type already exists
+      const existingDocIndex = newDocuments.findIndex(doc => doc.type === documentType);
+      
+      const newDoc = {
+        type: documentType,
+        name: name,
+        file: file,
+        view: URL.createObjectURL(file)
+      };
+      
+      if (existingDocIndex >= 0) {
+        // Replace existing document
+        newDocuments[existingDocIndex] = newDoc;
+      } else {
+        // Add new document
+        newDocuments.push(newDoc);
+      }
+      
+      setFormData({
+        ...formData,
+        documents: newDocuments
+      });
+    }
+  };
+
+  // Function to remove a document
+  const handleRemoveDocument = (documentType) => {
+    if (documentType === 'receipt') {
+      setFormData({
+        ...formData,
+        receipt: null
+      });
+    } else {
+      setFormData({
+        ...formData,
+        documents: formData.documents.filter(doc => doc.type !== documentType)
+      });
+    }
+  };
+
+  // Check if a document has been uploaded
+  const isDocumentUploaded = (documentType) => {
+    if (documentType === 'receipt') {
+      return formData.receipt !== null;
+    }
+    return formData.documents.some(doc => doc.type === documentType);
+  };
+
+  // Get uploaded document by type
+  const getDocumentByType = (documentType) => {
+    if (documentType === 'receipt') {
+      return formData.receipt;
+    }
+    return formData.documents.find(doc => doc.type === documentType);
   };
   
   // Get price based on agent's plan
@@ -162,10 +247,11 @@ export default function ServiceGroupsUI() {
     }
     
     return agentPlan?.price || locationPricing.plans[0]?.price || 0;
-};
+  };
 
   // Open modal with selected service
   const handleOpenModal = (serviceGroup, service) => {
+    
     const price = getPriceForAgentPlan(service);
     
     setSelectedService({
@@ -182,12 +268,20 @@ export default function ServiceGroupsUI() {
       amount: service.price,
       status: service.status,
       delivery: calculateDeliveryDate(new Date(), 7),
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
+      // Reset documents when opening a new form
+      documents: [],
+      receipt: null,
+      additional: {
+        inputType: '',
+        label: '',
+        value: ''
+      }
     });
  
     setIsModalOpen(true);
   };
-
+console.log("select",selectedService)
   // Handle viewing application details
   const handleViewDetails = (application) => {
     setSelectedApplication(application);
@@ -213,11 +307,17 @@ export default function ServiceGroupsUI() {
       service: serviceData,
       amount: parseFloat(formData.amount),
       date: new Date(formData.date).toISOString(),
-      agentId: session?.user?._id
+      agentId: session?.user?._id,
+      // Format documents for API
+      document: formData.documents.map(doc => ({
+        name: doc.name,
+        type: doc.type,
+        view: doc.view
+      }))
     };
     
     try {
-      const response = await fetch("http://localhost:3001/api/application/create", {
+      const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -271,11 +371,13 @@ export default function ServiceGroupsUI() {
           serviceId: '',
           staff: 'Not Assigned',
           amount: '',
-          document: {
-            "name":null,
-            "value":null
-          },
-          receipt: null
+          documents: [],
+          receipt: null,
+          additional: {
+            inputType: '',
+            label: '',
+            value: ''
+          }
         });
         setSubmissionStatus(null);
       }, 2000);
@@ -293,7 +395,7 @@ export default function ServiceGroupsUI() {
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     group.services.some(service => service.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
+  console.log(applications)
   // Get contrast color for status badges
   function getContrastColor(hexColor) {
     // Convert hex to RGB
@@ -307,7 +409,100 @@ export default function ServiceGroupsUI() {
     // Return dark or light color based on luminance
     return luminance > 0.5 ? '#000000' : '#ffffff';
   }
+  const [modifiedApplication, setModifiedApplication] = useState(null);
+const [documentsModified, setDocumentsModified] = useState(false);
+const [isUploading, setIsUploading] = useState(false);
+
+// Reset state when the modal opens
+useEffect(() => {
+  if (selectedApplication) {
+    setModifiedApplication({...selectedApplication});
+    setDocumentsModified(false);
+  }
+}, [selectedApplication, isViewModalOpen]);
+
+// Handle file upload change
+const handleViewFileChange = async (e, index) => {
+ 
   
+  const file = e.target.files[0];
+  setIsUploading(true);
+  
+  try {
+    // Create a new FormData instance
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Upload the file to your server
+    const response = await axios.post('/api/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    // Get the file URL from the response
+    const fileUrl = response.data.url;
+    
+    // Update the document in the modified application
+    const updatedDocuments = [...modifiedApplication.document];
+    updatedDocuments[index] = {
+      ...updatedDocuments[index],
+      view: fileUrl,
+      name: file.name,
+      // Clear the remark since we're reuploading
+      remark: ''
+    };
+    
+    setModifiedApplication({
+      ...modifiedApplication,
+      document: updatedDocuments
+    });
+    
+    setDocumentsModified(true);
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    alert("Failed to upload file. Please try again.");
+  } finally {
+    setIsUploading(false);
+  }
+};
+
+// Handle saving changes
+const handleSaveChanges = async () => {
+  if (!modifiedApplication) return;
+  
+  try {
+    // Send the updated application to your API
+    const response = await axios.put(
+      `https://dokument-guru-backend.vercel.app/api/application/update/${modifiedApplication._id}`,
+      modifiedApplication
+    );
+    
+    if (response.data) {
+      // Update the selected application with the response data
+      setSelectedApplication(response.data);
+      // Reset modification flags
+      setDocumentsModified(false);
+      
+      // Show success message
+      alert("Application updated successfully!");
+    }
+  } catch (error) {
+    console.error("Error updating application:", error);
+    alert("Failed to update application. Please try again.");
+  }
+};
+
+// Add a confirmation before closing if there are unsaved changes
+const handleCloseModal = () => {
+  if (documentsModified) {
+    if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+      setIsViewModalOpen(false);
+    }
+  } else {
+    setIsViewModalOpen(false);
+  }
+};
   // Application Table Component
   function ApplicationsTable({ applications }) {
     return (
@@ -408,6 +603,64 @@ export default function ServiceGroupsUI() {
       </div>
     );
   }
+
+  // Component for document upload UI
+  const DocumentUploadField = ({ documentType, label }) => {
+    const isUploaded = isDocumentUploaded(documentType);
+    const document = getDocumentByType(documentType);
+    
+    return (
+      <div className="mb-3">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <div className="mt-1">
+          {isUploaded ? (
+            <div className="flex items-center justify-between border border-green-300 rounded-md py-2 px-3 bg-green-50">
+              <div className="flex items-center truncate">
+                <FiFile className="flex-shrink-0 mr-2 text-green-500" />
+                <span className="text-sm text-green-700 truncate">{document.name}</span>
+              </div>
+              <div className="flex-shrink-0 flex">
+                {document.view && (
+                  <a
+                    href={document.view}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-800 mx-1"
+                  >
+                    <FiEye />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveDocument(documentType)}
+                  className="text-red-600 hover:text-red-800 mx-1"
+                >
+                  <FiTrash2 />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="block w-full relative">
+              <span className="sr-only">Choose file</span>
+              <input 
+                type="file"
+                name={documentType}
+                onChange={(e) => handleFileChange(e, documentType,label)}
+                className="hidden"
+              />
+              <div className="flex items-center justify-between border border-gray-300 rounded-md py-2 px-3 text-sm cursor-pointer bg-white hover:bg-gray-50">
+                <div className="flex items-center">
+                  <FiFile className="mr-2 text-gray-400" />
+                  <span className="text-gray-500">Select {label.toLowerCase()}</span>
+                </div>
+                <FiUpload className="text-gray-400" />
+              </div>
+            </label>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Loading state for the entire page
   if (loading) {
@@ -610,13 +863,14 @@ export default function ServiceGroupsUI() {
                       <input
                         type="text"
                         name="name"
-                        required
                         value={formData.name}
                         onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500"
+                        required
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
                       />
                     </div>
                   </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Phone Number*</label>
                     <div className="mt-1 relative rounded-md shadow-sm">
@@ -626,16 +880,16 @@ export default function ServiceGroupsUI() {
                       <input
                         type="tel"
                         name="phone"
-                        required
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500"
+                        required
+                        pattern="[0-9]{10}"
+                        title="Please enter a valid 10-digit phone number"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
                       />
                     </div>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Email Address</label>
                     <div className="mt-1 relative rounded-md shadow-sm">
@@ -647,29 +901,31 @@ export default function ServiceGroupsUI() {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Address*</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiMapPin className="text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        name="address"
-                        required
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {
+                      selectedService.formData.map((data)=>{
+                        return<div key={data.label}>
+                          <label className="block text-sm font-medium text-gray-700">{data.label}</label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                          
+                          {/* <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FiMail className="text-gray-400" />
+                          </div> */}
+                         <input
+  type={data.inputType}
+  name="additional.value"
+  value={formData.additional.value || ''}
+  onChange={(e)=>handleInputChange(e,data.label)}
+  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+/>
+
+                        </div>
+                        </div> 
+                      })
+                    }
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Application Date</label>
                     <div className="mt-1 relative rounded-md shadow-sm">
@@ -681,97 +937,75 @@ export default function ServiceGroupsUI() {
                         name="date"
                         value={formData.date}
                         onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-900"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Expected Delivery</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={formData.delivery}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-900"
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FiMapPin className="text-gray-400" />
+                    </div>
+                    <textarea
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiCreditCard className="text-gray-400" />
-                      </div>
-                      <input
-                        type="number"
-                        name="amount"
-                        value={formData.amount}
-                        onChange={handleInputChange}
-                        className="pl-10 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-900"
-                        readOnly
-                      />
-                    </div>
-                    </div>
+                </div>
+               
+                
+                {/* Payment Details */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Payment Receipt</label>
+                    <span className="text-xs text-gray-500">Upload payment confirmation</span>
+                  </div>
+                  <div className="mt-1">
+                    <DocumentUploadField documentType="receipt" label="Payment Receipt" />
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Dynamic Document Upload Fields */}
+                {selectedService.documentNames && selectedService.documentNames.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Upload Document</label>
-                    <div className="mt-1 flex items-center">
-                      <label className="block w-full relative">
-                        <span className="sr-only">Choose file</span>
-                        <input 
-  type="file"
-  name="document"
-  onChange={handleFileChange}
-  className="hidden"
-/>
-                        <div className="flex items-center justify-between border border-gray-300 rounded-md py-2 px-3 text-sm cursor-pointer bg-white hover:bg-gray-50">
-                          <div className="flex items-center">
-                            <FiFile className="mr-2 text-gray-400" />
-                            <span className="text-gray-500">
-                              {formData.document.name ? formData.document.name : 'Select document file'}
-                            </span>
-                          </div>
-                          <FiUpload className="text-gray-400" />
-                        </div>
-                      </label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Required Documents</label>
+                      <span className="text-xs text-gray-500">Upload all required documents</span>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Upload Payment Receipt</label>
-                    <div className="mt-1 flex items-center">
-                      <label className="block w-full relative">
-                        <span className="sr-only">Choose receipt</span>
-                        <input 
-                          type="file"
-                          name="receipt"
-                          onChange={handleFileChange}
-                          className="hidden"
+                    <div className="space-y-3">
+                      {selectedService.documentNames.map((docName, index) => (
+                        <DocumentUploadField 
+                          key={index} 
+                          documentType={docName} 
+                          label={docName}
                         />
-                        <div className="flex items-center justify-between border border-gray-300 rounded-md py-2 px-3 text-sm cursor-pointer bg-white hover:bg-gray-50">
-                          <div className="flex items-center">
-                            <FiFile className="mr-2 text-gray-400" />
-                            <span className="text-gray-500">
-                              {formData.receipt ? formData.receipt : 'Select receipt file'}
-                            </span>
-                          </div>
-                          <FiUpload className="text-gray-400" />
-                        </div>
-                      </label>
+                      ))}
                     </div>
                   </div>
-                </div>
+                )}
                 
-                <div className="pt-2">
+                <div className="pt-4 border-t border-gray-200 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
                     disabled={formLoading}
-                    className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-                    ${formLoading ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'} 
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {formLoading ? (
                       <>
-                        <FiRefreshCw className="animate-spin h-5 w-5 mr-2" />
+                        <FiRefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
                         Submitting...
                       </>
                     ) : (
@@ -786,149 +1020,300 @@ export default function ServiceGroupsUI() {
         
         {/* View Application Modal */}
         {isViewModalOpen && selectedApplication && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Application Details
-                </h3>
-                <button 
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <FiX className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="mb-6">
-                <div className="flex items-center mb-3">
-                  <div className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-gray-600 font-medium">
-                      {selectedApplication.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-medium text-gray-900">{selectedApplication.name}</h4>
-                    <p className="text-sm text-gray-500">
-                      Applied for: <strong>{selectedApplication.service.name}</strong>
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 mt-1 mb-3">
-                  <span 
-                    className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
-                    style={{ 
-                      backgroundColor: selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb',
-                      color: getContrastColor(selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb')
-                    }}
-                  >
-                    {selectedApplication.initialStatus[0]?.name || 'Pending'}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    ₹{selectedApplication.amount}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">Customer Information</h5>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-start">
-                        <FiUser className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Full Name</p>
-                          <p className="text-sm font-medium text-gray-800">{selectedApplication.name}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start">
-                        <FiPhone className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Phone Number</p>
-                          <p className="text-sm font-medium text-gray-800">{selectedApplication.phone}</p>
-                        </div>
-                      </div>
-                      
-                      {selectedApplication.email && (
-                        <div className="flex items-start">
-                          <FiMail className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs text-gray-500">Email Address</p>
-                            <p className="text-sm font-medium text-gray-800">{selectedApplication.email}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-start">
-                        <FiMapPin className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Address</p>
-                          <p className="text-sm font-medium text-gray-800">{selectedApplication.address}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-2">Application Details</h5>
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-start">
-                        <FiFileText className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Service</p>
-                          <p className="text-sm font-medium text-gray-800">{selectedApplication.service.name}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start">
-                        <FiCalendar className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Submitted Date</p>
-                          <p className="text-sm font-medium text-gray-800">
-                            {new Date(selectedApplication.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start">
-                        <FiCalendar className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Expected Delivery</p>
-                          <p className="text-sm font-medium text-gray-800">{selectedApplication.delivery}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start">
-                        <FiCreditCard className="text-gray-400 mt-1 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="text-xs text-gray-500">Amount</p>
-                          <p className="text-sm font-medium text-gray-800">₹{selectedApplication.amount}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm text-gray-500 mb-4">
-                  For any issues or questions regarding this application, please contact our support team.
-                </p>
-                <button
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Close
-                </button>
-              </div>
+  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h3 className="text-2xl font-semibold text-gray-900">
+            {selectedApplication.name}'s Application
+          </h3>
+        </div>
+        <button 
+          onClick={() => setIsViewModalOpen(false)}
+          className="text-gray-400 hover:text-gray-500 transition-colors p-1 -m-1"
+        >
+          <FiX className="h-6 w-6" />
+        </button>
+      </div>
+      
+      {/* Status Bar */}
+      <div className="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+        <div className="flex items-center">
+          <div 
+            className="px-3 py-1 text-sm font-medium rounded-full shadow-sm"
+            style={{ 
+              backgroundColor: selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb',
+              color: getContrastColor(selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb')
+            }}
+          >
+            {selectedApplication.initialStatus[0]?.name || 'Processing'}
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-gray-700">Submitted</p>
+            <p className="text-xs text-gray-500">
+              {new Date(selectedApplication.createdAt).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-gray-700">Expected Delivery</p>
+          <p className="text-sm text-indigo-600 font-semibold">
+            {selectedApplication.delivery}
+          </p>
+        </div>
+      </div>
+      
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Service Details Card */}
+        <div className="lg:col-span-1 bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-indigo-100 rounded-lg mr-3">
+              <FiPackage className="h-5 w-5 text-indigo-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Service Details</h4>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Service</p>
+              <p className="text-sm font-medium text-gray-900 mt-1">{selectedApplication.service.name}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</p>
+              <p className="text-sm font-medium text-gray-900 mt-1">₹{selectedApplication.amount}</p>
             </div>
           </div>
+        </div>
+        
+        {/* Applicant Details Card */}
+        <div className="lg:col-span-1 bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-blue-100 rounded-lg mr-3">
+              <FiUser className="h-5 w-5 text-blue-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Applicant Details</h4>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Name</p>
+              <p className="text-sm font-medium text-gray-900 mt-1">{selectedApplication.name}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</p>
+              <p className="text-sm font-medium text-gray-900 mt-1">{selectedApplication.phone}</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Timeline Card */}
+        <div className="lg:col-span-1 bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-purple-100 rounded-lg mr-3">
+              <FiClock className="h-5 w-5 text-purple-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Application Timeline</h4>
+          </div>
+          <div className="space-y-4">
+            {/* Submitted Status - Always completed */}
+            <div className="flex">
+              <div className="flex flex-col items-center mr-4">
+                <div className="w-3 h-3 bg-green-500 rounded-full mt-1"></div>
+                <div className="w-px h-full bg-gray-200"></div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Application Submitted</p>
+                <p className="text-xs text-gray-500">
+                  {new Date(selectedApplication.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {/* Dynamic Status Timeline from Service Status */}
+            {selectedApplication.service.status.map((statusItem, index) => {
+              // Find the current status index
+              const currentStatusIndex = selectedApplication.service.status.findIndex(
+                s => s._id === selectedApplication.initialStatus[0]?._id
+              );
+              
+              // Check if this status is completed (before current status)
+              const isCompleted = index < currentStatusIndex;
+              // Check if this is the current status
+              const isCurrent = index === currentStatusIndex;
+              // Check if this is a future status
+              const isFuture = index > currentStatusIndex;
+
+              return (
+                <div key={statusItem._id} className="flex">
+                  <div className="flex flex-col items-center mr-4">
+                    <div 
+                      className={`w-3 h-3 rounded-full mt-1 ${
+                        isCompleted || isCurrent ? 'bg-green-500' : 'bg-gray-300'
+                      }`}
+                    ></div>
+                    {index !== selectedApplication.service.status.length - 1 && (
+                      <div className={`w-px h-full ${
+                        isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                      }`}></div>
+                    )}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      {statusItem.name}
+                      {isCurrent && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-normal rounded-full bg-green-100 text-green-800">
+                          Current
+                        </span>
+                      )}
+                    </p>
+                    {isCompleted || isCurrent ? (
+                      <p className="text-xs text-gray-500">
+                        {isCurrent 
+                          ? `Updated: ${new Date(selectedApplication.updatedAt).toLocaleString()}`
+                          : `Completed: ${new Date(selectedApplication.updatedAt).toLocaleString()}`
+                        }
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-400">Pending</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Delivery Status - Only show if all statuses are completed */}
+            {selectedApplication.initialStatus[0]?._id === 
+              selectedApplication.service.status[selectedApplication.service.status.length - 1]?._id && (
+              <div className="flex">
+                <div className="flex flex-col items-center mr-4">
+                  <div className="w-3 h-3 bg-gray-300 rounded-full mt-1"></div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Service Completion</p>
+                  <p className="text-xs text-gray-400">Estimated by {selectedApplication.delivery}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Documents Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg mr-3">
+              <FiFileText className="h-5 w-5 text-green-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Uploaded Documents</h4>
+          </div>
+          
+          {/* Save Changes Button - Only show when documents have been modified */}
+          {documentsModified && (
+            <button
+              onClick={handleSaveChanges}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+            >
+              <FiSave className="mr-2 -ml-1 h-4 w-4" />
+              Save Changes
+            </button>
+          )}
+        </div>
+        
+        {modifiedApplication?.document && modifiedApplication?.document.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {modifiedApplication.document.map((doc, index) => (
+              <div key={index} className="border border-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="p-4">
+                  <div className="flex items-start">
+                    <div className="bg-gray-50 p-3 rounded-lg mr-4">
+                      <FiFile className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h5 className="text-sm font-medium text-gray-900 truncate">{doc.name}</h5>
+                      {doc.remark && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-red-500 uppercase tracking-wider mb-1">
+                            Remark:
+                          </p>
+                          <p className="text-xs text-gray-700 italic bg-red-50 p-2 rounded-md">
+                            {doc.remark}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 flex justify-between border-t border-gray-100">
+                  {doc.view && (
+                    <a
+                      href={doc.view}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                    >
+                      <FiEye className="mr-1.5 h-4 w-4" />
+                      View Document
+                    </a>
+                  )}
+                  
+                  {/* Reupload Button - Only show for documents with remarks */}
+                  {doc.remark && (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id={`file-upload-${index}`}
+                        onChange={(e) => handleViewFileChange(e, index)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <label
+                        htmlFor={`file-upload-${index}`}
+                        className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-800 cursor-pointer"
+                      >
+                        <FiUpload className="mr-1.5 h-4 w-4" />
+                        Reupload Document
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <FiFile className="mx-auto h-8 w-8 text-gray-400" />
+            <p className="mt-2 text-sm text-gray-500">No documents uploaded</p>
+          </div>
         )}
+      </div>
+      
+      {/* Footer Actions */}
+      {/* <div className="border-t border-gray-100 pt-5 flex flex-wrap justify-between items-center">
+        <div className="mb-3 sm:mb-0">
+          <p className="text-xs text-gray-500">
+            Last updated: {new Date(selectedApplication.updatedAt).toLocaleString()}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setIsViewModalOpen(false)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            Close
+          </button>
+          <button
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          >
+            <FiDownload className="mr-2 -ml-1 h-4 w-4" />
+            Export Details
+          </button>
+        </div>
+      </div> */}
+    </div>
+  </div>
+)}
       </div>
     </div>
   );

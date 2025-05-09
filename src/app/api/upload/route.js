@@ -7,7 +7,7 @@ export async function POST(req) {
     const file = data.get("file");
     const type = data.get("type");
 
-    if (!file || !type) {
+    if (!file) {
       return NextResponse.json({ error: "File or type missing" }, { status: 400 });
     }
 

@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
 import { 
   Bell, 
   Search, 
@@ -14,6 +14,7 @@ import Image from 'next/image';
 import { useSession } from '@/context/SessionContext';
 import { FiMenu } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
+import NotificationSystem from './NotificationSystem';
 
 const StaffNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +22,21 @@ const StaffNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { session, signOut } = useSession();
   const router = useRouter();
+   const [currentUser,setCurrentUser]=useState({
+      id:"",
+      name:"",
+      role:""
+    })
+    useEffect(()=>{
+      const handleCheckUser =()=>{
+        setCurrentUser({
+          name:session.user.name,
+          id:session.user._id,
+          role:session.user.role
+        })
+      }
+      handleCheckUser()
+    },[session])
 
   const notifications = [
     { id: 1, message: "New document uploaded", time: "5 mins ago" },
@@ -96,6 +112,10 @@ const StaffNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
         </div> */}
 
         {/* Profile */}
+        <div className="flex items-center">
+                              {/* Notification Component */}
+                              <NotificationSystem userRole="staff" userId={currentUser.id} />
+                            </div>
         <div className="relative">
           <button 
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}

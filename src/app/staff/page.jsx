@@ -675,7 +675,7 @@ export default function StaffDashboard() {
       const data = await response.json();
       
       // Filter applications assigned to current staff
-      const filteredApplications = data.filter(app => app.staff === session?.user?.name);
+      const filteredApplications = data.filter(app => app.staff === session?.user?._id);
       setApplications(filteredApplications);
       
       // Calculate stats

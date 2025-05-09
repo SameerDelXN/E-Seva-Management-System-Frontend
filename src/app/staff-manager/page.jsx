@@ -37,7 +37,7 @@ export default function StaffManagerDashboard() {
   const [docRemarks, setDocRemarks] = useState([]);
   const [newDocRemark, setNewDocRemark] = useState("");
 
-  const API_BASE_URL = "http://localhost:3001/api/application";
+  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
   // Stats counters for dashboard
@@ -127,6 +127,7 @@ console.log("appi",applications)
 
   // Filter staff based on application service
   const filterStaffForApplication = (application) => {
+    console.log(application)
     if (!application || !application.service) return staffMembers;
 
     const serviceName = typeof application.service === 'object' 
@@ -232,6 +233,7 @@ console.log("appi",applications)
   const handleAssignStaff = (application) => {
     setSelectedApplication(application);
     setFilteredStaffMembers(filterStaffForApplication(application));
+    console.log(filteredStaffMembers)
     setIsModalOpen(true);
   };
 
@@ -677,7 +679,7 @@ const addDocRemark = async (applicationId,documentId) => {
                   filteredStaffMembers.map(staff => (
                     <button
                       key={staff.id}
-                      onClick={() => updateAssignment(selectedApplication._id, staff.name)}
+                      onClick={() => updateAssignment(selectedApplication._id, staff.id)}
                       className={`w-full flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 
                         ${selectedApplication.staff === staff.name ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}
                     >

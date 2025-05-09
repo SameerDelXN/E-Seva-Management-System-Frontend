@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect,useRef } from 'react';
 import axios from 'axios';
-import { FiUser, FiMail, FiPhone, FiHome,FiX,FiSettings,FiSave ,FiMapPin,FiFileText, FiUserPlus, FiCalendar, FiFile,FiCreditCard, FiLock, FiUpload, FiChevronDown, FiShoppingBag, FiKey, FiEdit2, FiTrash2, FiPlus, FiSearch, FiDollarSign, FiEye, FiRefreshCw, FiPackage, FiAlertCircle } from 'react-icons/fi';
+import { FiUser,FiLoader, FiTag,FiUploadCloud,FiMail, FiPhone, FiHome,FiX,FiSettings,FiSave ,FiMapPin,FiFileText, FiUserPlus, FiCalendar, FiFile,FiCreditCard, FiLock, FiUpload, FiChevronDown, FiShoppingBag, FiKey, FiEdit2, FiTrash2, FiPlus, FiSearch, FiDollarSign, FiEye, FiRefreshCw, FiPackage, FiAlertCircle } from 'react-icons/fi';
 import LoadingSpinner from '@/components/Loading';
 // Import popup components
 import AddSuccessPopup from '@/components/popups/addSucess';
@@ -1214,6 +1214,8 @@ const AgentManagement = () => {
   };
   
   const AddAgentForm = () => {
+    const [plans, setPlans] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [formData, setFormData] = useState({
       fullName: '',
       email: '',
@@ -1223,6 +1225,7 @@ const AgentManagement = () => {
       shopAddress: '',
       referralCode:'',
       location:'',
+      purchasePlan: '',
       documents: {
         aadharCard: '',
         shopLicense: '',
@@ -1234,13 +1237,59 @@ const AgentManagement = () => {
       status:''
     });
     const [previewImages, setPreviewImages] = useState({});
-    const [isLoading, setIsLoading] = useState(false); // Add loading state
+    const [isLoading, setIsLoading] = useState(false);
+    const [locationsLoading, setLocationsLoading] = useState(false);
     const fileInputRefs = {
       aadharCard: useRef(null),
       shopLicense: useRef(null),
       ownerPhoto: useRef(null),
       supportingDocument: useRef(null),
     };
+    
+    // Fetch plans when component mounts
+    useEffect(() => {
+      const fetchPlans = async () => {
+        try {
+          const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/manage-plan/fetch-plans");
+          if (response.ok) {
+            const data = await response.json();
+            setPlans(data.plans || []);
+          } else {
+            console.error("Failed to fetch plans");
+            toast.error("Failed to load plans. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error fetching plans:", error);
+          toast.error("Unable to load plans. Please check your connection.");
+        }
+      };
+      
+      fetchPlans();
+    }, []);
+    
+    // Fetch locations when component mounts
+    useEffect(() => {
+      const fetchLocations = async () => {
+        setLocationsLoading(true);
+        try {
+          const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/location/fetch-all");
+          if (response.ok) {
+            const data = await response.json();
+            setLocations(data.locations || []);
+          } else {
+            console.error("Failed to fetch locations");
+            toast.error("Failed to load locations. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error fetching locations:", error);
+          toast.error("Unable to load locations. Please check your connection.");
+        } finally {
+          setLocationsLoading(false);
+        }
+      };
+      
+      fetchLocations();
+    }, []);
   
     const handleChange = (e) => {
       const { name, value } = e.target;
@@ -1398,6 +1447,13 @@ const AgentManagement = () => {
           return;
         }
 
+        // Plan validation
+        if (!formData.purchasePlan) {
+          toast.error('Please select a subscription plan');
+          setIsLoading(false);
+          return;
+        }
+
         // Validate required documents
         const missingDocuments = VALIDATION_RULES.documents.required
           .filter(doc => !formData.documents[doc])
@@ -1438,6 +1494,7 @@ const AgentManagement = () => {
             shopAddress: '',
             referralCode: '',
             location: '',
+            purchasePlan: '',
             documents: {
               aadharCard: '',
               shopLicense: '',
@@ -1660,9 +1717,6 @@ const AgentManagement = () => {
           <div>
             <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-2">
               Shop Name <span className="text-red-500">*</span>
-              <span className="text-xs text-gray-500 ml-2">
-                ({formData.shopName.length}/{VALIDATION_RULES.maxLengths.shopName} characters)
-              </span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1684,13 +1738,10 @@ const AgentManagement = () => {
           <div>
             <label htmlFor="shopAddress" className="block text-sm font-medium text-gray-700 mb-2">
               Shop Address <span className="text-red-500">*</span>
-              <span className="text-xs text-gray-500 ml-2">
-                ({formData.shopAddress.length}/{VALIDATION_RULES.maxLengths.shopAddress} characters)
-              </span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 pt-3 pointer-events-none">
-                <FiHome className="text-gray-400" />
+                <FiMapPin className="text-gray-400" />
               </div>
               <textarea
                 id="shopAddress"
@@ -1706,40 +1757,51 @@ const AgentManagement = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-  <div className="relative">
-    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-      <FiMapPin className="text-gray-400" />
-    </div>
-    <select
-      name="location"
-      value={formData.location}
-      onChange={handleChange}
-      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pr-10"
-    >
-      <option value="">Select a location</option>
-      {locations.map((loc) => (
-        <option key={loc._id} value={loc.district}>
-          {loc.district}, {loc.state}
-        </option>
-      ))}
-    </select>
-    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-      <FiChevronDown className="text-gray-400" />
-    </div>
-  </div>
-</div>
             <div>
-              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
-                Referral Code
-                <span className="text-xs text-gray-500 ml-2">
-                  ({formData.referralCode.length}/{VALIDATION_RULES.maxLengths.referralCode} characters)
-                </span>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                Location <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiKey className="text-gray-400" />
+                  <FiMapPin className="text-gray-400" />
+                </div>
+                <select
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                  className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 appearance-none"
+                  disabled={locationsLoading}
+                >
+                  <option value="">Select a district</option>
+                  {locationsLoading ? (
+                    <option value="" disabled>Loading locations...</option>
+                  ) : (
+                    locations.map((location) => (
+                      <option key={location._id} value={location.district}>
+                        {location.district}, {location.state}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                  {locationsLoading ? (
+                    <FiLoader className="text-gray-500 animate-spin" />
+                  ) : (
+                    <FiChevronDown className="text-gray-500" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
+                Referral Code (optional)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiTag className="text-gray-400" />
                 </div>
                 <input
                   id="referralCode"
@@ -1748,7 +1810,7 @@ const AgentManagement = () => {
                   value={formData.referralCode}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
-                  placeholder="REF123 (optional)"
+                  placeholder="Enter referral code if any"
                 />
               </div>
             </div>
@@ -1757,182 +1819,340 @@ const AgentManagement = () => {
       </div>
     </div>
 
-    {/* Document Upload Section */}
-    <div className="mt-8">
-      <div className="flex items-center space-x-3 mb-6">
+    {/* Subscription Plan Section */}
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3">
         <div className="p-2 bg-green-100 rounded-lg text-green-600">
-          <FiFileText size={20} />
+          <FiPackage size={20} />
         </div>
-        <h3 className="text-xl font-semibold text-gray-800">Required Documents</h3>
+        <h3 className="text-xl font-semibold text-gray-800">Subscription Plan</h3>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[
-          { 
-            field: 'aadharCard', 
-            label: 'Aadhar Card', 
-            type: 'aadhar', 
-            icon: <FiCreditCard />, 
-            color: 'bg-blue-100 text-blue-600',
-            maxSize: '1MB'
-          },
-          { 
-            field: 'shopLicense', 
-            label: 'Shop License', 
-            type: 'pan', 
-            icon: <FiPackage />, 
-            color: 'bg-purple-100 text-purple-600',
-            maxSize: '1MB'
-          },
-          { 
-            field: 'ownerPhoto', 
-            label: 'Owner Photo', 
-            type: 'profile', 
-            icon: <FiUser />, 
-            color: 'bg-pink-100 text-pink-600',
-            maxSize: '1MB'
-          },
-          { 
-            field: 'supportingDocument', 
-            label: 'Supporting Document', 
-            type: 'support', 
-            icon: <FiFile />, 
-            color: 'bg-amber-100 text-amber-600',
-            maxSize: '1MB'
-          }
-        ].map(({ field, label, type, icon, color, maxSize }) => (
-          <div key={field} className={`bg-gray-50 p-5 rounded-xl border transition-colors ${
-            !formData.documents[field] && VALIDATION_RULES.documents.required.includes(field)
-              ? 'border-red-200'
-              : 'border-gray-100 hover:border-blue-200'
-          }`}>
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-medium text-gray-700">
-                {label} {VALIDATION_RULES.documents.required.includes(field) && <span className="text-red-500">*</span>}
-              </label>
-              {!formData.documents[field] && VALIDATION_RULES.documents.required.includes(field) && (
-                <span className="text-red-500 text-xs flex items-center">
-                  <FiAlertCircle className="mr-1" />
-                  Required
-                </span>
-              )}
+      <div className="space-y-5">
+        <div>
+          <label htmlFor="planName" className="block text-sm font-medium text-gray-700 mb-2">
+            Select Plan <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiPackage className="text-gray-400" />
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className={`flex-shrink-0 h-12 w-12 rounded-xl ${color} flex items-center justify-center`}>
-                {React.cloneElement(icon, { size: 20 })}
-              </div>
-              
-              <div className="flex-1">
-                <label htmlFor={field} className="cursor-pointer">
-                  <div className={`flex items-center justify-center px-4 py-3 border-2 border-dashed rounded-xl transition-colors ${
-                    !formData.documents[field] && VALIDATION_RULES.documents.required.includes(field)
-                      ? 'border-red-200 bg-red-50 hover:bg-red-100'
-                      : 'border-gray-200 hover:bg-gray-100'
-                  }`}>
-                    {previewImages[field] ? (
-                      <span className="text-sm font-medium text-gray-700">Change File</span>
-                    ) : (
-                      <>
-                        <FiUpload className={`mr-2 ${
-                          !formData.documents[field] && VALIDATION_RULES.documents.required.includes(field)
-                            ? 'text-red-500'
-                            : 'text-gray-500'
-                        }`} />
-                        <span className={`text-sm ${
-                          !formData.documents[field] && VALIDATION_RULES.documents.required.includes(field)
-                            ? 'text-red-600'
-                            : 'text-gray-600'
-                        }`}>
-                          Upload File
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <input
-                    id={field}
-                    ref={fileInputRefs[field]}
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFileChange(e, field, type)}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-            
-            {previewImages[field] ? (
-              <div className="mt-4">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPreviewImages(prev => {
-                          const newPreviews = {...prev};
-                          delete newPreviews[field];
-                          return newPreviews;
-                        });
-                        setFormData(prev => ({
-                          ...prev,
-                          documents: { ...prev.documents, [field]: '' }
-                        }));
-                        if (fileInputRefs[field].current) {
-                          fileInputRefs[field].current.value = '';
-                        }
-                      }}
-                      className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </div>
-                  <img
-                    src={previewImages[field]}
-                    alt={label}
-                    className="h-28 w-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2 truncate">
-                  {label} uploaded successfully
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 mt-2">
-                {VALIDATION_RULES.documents.required.includes(field)
-                  ? 'This document is required'
-                  : 'Optional document'}
-              </p>
-            )}
-            <div className="text-xs text-gray-500 mt-2">
-              Maximum file size: {maxSize}
-              {formData.documents[field] && (
-                <span className="ml-2">
-                  • Current file: {
-                    (formData.documents[field].size / (1024 * 1024)).toFixed(2)
-                  }MB
-                </span>
-              )}
+            <select
+              id="planName"
+              name="purchasePlan"
+              value={formData.purchasePlan}
+              onChange={handleChange}
+              required
+              className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 appearance-none"
+            >
+              <option value="">Select a subscription plan</option>
+              {plans.map((plan) => (
+                <option key={plan._id} value={plan.name}>
+                  {plan.name} - ₹{plan.price} ({plan.duration} days)
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <FiChevronDown className="text-gray-500" />
             </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
 
-    {/* Login Requirements */}
-    <div className="mt-8">
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+    {/* Document Upload Section */}
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+          <FiFile size={20} />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-800">Document Upload</h3>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Aadhar Card Upload */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Aadhar Card <span className="text-red-500">*</span>
+          </label>
+          <div 
+            className={`border-2 border-dashed rounded-xl p-4 transition-colors ${
+              previewImages.aadharCard 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            {previewImages.aadharCard ? (
+              <div className="relative">
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={previewImages.aadharCard} 
+                    alt="Aadhar Card preview" 
+                    className="max-h-48 rounded-lg object-contain mx-auto"
+                  />
+                </div>
+                <div className="absolute top-2 right-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        documents: { ...prev.documents, aadharCard: '' }
+                      }));
+                      setPreviewImages(prev => ({ ...prev, aadharCard: '' }));
+                      if (fileInputRefs.aadharCard.current) {
+                        fileInputRefs.aadharCard.current.value = '';
+                      }
+                    }}
+                    className="bg-red-500/90 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-green-600 mt-2 text-center">
+                  Aadhar Card uploaded successfully
+                </p>
+              </div>
+            ) : (
+              <div 
+                className="flex flex-col items-center justify-center cursor-pointer py-4"
+                onClick={() => fileInputRefs.aadharCard.current.click()}
+              >
+                <FiUploadCloud className="text-gray-400 mb-2" size={30} />
+                <p className="text-sm font-medium text-gray-700">
+                  Click to upload Aadhar Card
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG or PDF (max. {VALIDATION_RULES.fileUpload.documentSizes.aadharCard / (1024 * 1024)}MB)
+                </p>
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRefs.aadharCard}
+              onChange={(e) => handleFileChange(e, 'aadharCard', 'document')}
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Shop License Upload */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Shop License <span className="text-red-500">*</span>
+          </label>
+          <div 
+            className={`border-2 border-dashed rounded-xl p-4 transition-colors ${
+              previewImages.shopLicense 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            {previewImages.shopLicense ? (
+              <div className="relative">
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={previewImages.shopLicense} 
+                    alt="Shop License preview" 
+                    className="max-h-48 rounded-lg object-contain mx-auto"
+                  />
+                </div>
+                <div className="absolute top-2 right-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        documents: { ...prev.documents, shopLicense: '' }
+                      }));
+                      setPreviewImages(prev => ({ ...prev, shopLicense: '' }));
+                      if (fileInputRefs.shopLicense.current) {
+                        fileInputRefs.shopLicense.current.value = '';
+                      }
+                    }}
+                    className="bg-red-500/90 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-green-600 mt-2 text-center">
+                  Shop License uploaded successfully
+                </p>
+              </div>
+            ) : (
+              <div 
+                className="flex flex-col items-center justify-center cursor-pointer py-4"
+                onClick={() => fileInputRefs.shopLicense.current.click()}
+              >
+                <FiUploadCloud className="text-gray-400 mb-2" size={30} />
+                <p className="text-sm font-medium text-gray-700">
+                  Click to upload Shop License
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG or PDF (max. {VALIDATION_RULES.fileUpload.documentSizes.shopLicense / (1024 * 1024)}MB)
+                </p>
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRefs.shopLicense}
+              onChange={(e) => handleFileChange(e, 'shopLicense', 'document')}
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Owner Photo Upload */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Owner Photo <span className="text-red-500">*</span>
+          </label>
+          <div 
+            className={`border-2 border-dashed rounded-xl p-4 transition-colors ${
+              previewImages.ownerPhoto 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            {previewImages.ownerPhoto ? (
+              <div className="relative">
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={previewImages.ownerPhoto} 
+                    alt="Owner Photo preview" 
+                    className="max-h-48 rounded-lg object-contain mx-auto"
+                  />
+                </div>
+                <div className="absolute top-2 right-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        documents: { ...prev.documents, ownerPhoto: '' }
+                      }));
+                      setPreviewImages(prev => ({ ...prev, ownerPhoto: '' }));
+                      if (fileInputRefs.ownerPhoto.current) {
+                        fileInputRefs.ownerPhoto.current.value = '';
+                      }
+                    }}
+                    className="bg-red-500/90 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-green-600 mt-2 text-center">
+                  Owner Photo uploaded successfully
+                </p>
+              </div>
+            ) : (
+              <div 
+                className="flex flex-col items-center justify-center cursor-pointer py-4"
+                onClick={() => fileInputRefs.ownerPhoto.current.click()}
+              >
+                <FiUploadCloud className="text-gray-400 mb-2" size={30} />
+                <p className="text-sm font-medium text-gray-700">
+                  Click to upload Owner Photo
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG or PNG (max. {VALIDATION_RULES.fileUpload.documentSizes.ownerPhoto / (1024 * 1024)}MB)
+                </p>
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRefs.ownerPhoto}
+              onChange={(e) => handleFileChange(e, 'ownerPhoto', 'document')}
+              accept=".jpg,.jpeg,.png"
+              className="hidden"
+            />
+          </div>
+        </div>
+
+        {/* Supporting Document Upload (Optional) */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Supporting Document <span className="text-gray-500 text-xs">(optional)</span>
+          </label>
+          <div 
+            className={`border-2 border-dashed rounded-xl p-4 transition-colors ${
+              previewImages.supportingDocument 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            {previewImages.supportingDocument ? (
+              <div className="relative">
+                <div className="flex items-center justify-center">
+                  <img 
+                    src={previewImages.supportingDocument} 
+                    alt="Supporting Document preview" 
+                    className="max-h-48 rounded-lg object-contain mx-auto"
+                  />
+                </div>
+                <div className="absolute top-2 right-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        documents: { ...prev.documents, supportingDocument: '' }
+                      }));
+                      setPreviewImages(prev => ({ ...prev, supportingDocument: '' }));
+                      if (fileInputRefs.supportingDocument.current) {
+                        fileInputRefs.supportingDocument.current.value = '';
+                      }
+                    }}
+                    className="bg-red-500/90 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-green-600 mt-2 text-center">
+                  Supporting Document uploaded successfully
+                </p>
+              </div>
+            ) : (
+              <div 
+                className="flex flex-col items-center justify-center cursor-pointer py-4"
+                onClick={() => fileInputRefs.supportingDocument.current.click()}
+              >
+                <FiUploadCloud className="text-gray-400 mb-2" size={30} />
+                <p className="text-sm font-medium text-gray-700">
+                  Click to upload Supporting Document
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG or PDF (max. {VALIDATION_RULES.fileUpload.documentSizes.supportingDocument / (1024 * 1024)}MB)
+                </p>
+              </div>
+            )}
+            <input
+              type="file"
+              ref={fileInputRefs.supportingDocument}
+              onChange={(e) => handleFileChange(e, 'supportingDocument', 'document')}
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="hidden"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Account Credentials Section */}
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
           <FiLock size={20} />
         </div>
-        <h3 className="text-xl font-semibold text-gray-800">Login Credentials</h3>
+        <h3 className="text-xl font-semibold text-gray-800">Account Credentials</h3>
       </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
             Username <span className="text-red-500">*</span>
-            <span className="text-xs text-gray-500 ml-2">
-              ({formData.username.length}/{VALIDATION_RULES.username.maxLength} characters)
-            </span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1944,26 +2164,23 @@ const AgentManagement = () => {
               type="text"
               value={formData.username}
               onChange={handleChange}
-              maxLength={VALIDATION_RULES.username.maxLength}
               required
               className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
-              placeholder="Choose a username (letters, numbers, underscores only)"
+              placeholder="Choose a username"
             />
           </div>
-          {formData.username && !VALIDATION_RULES.username.pattern.test(formData.username) && (
-            <p className="mt-1 text-sm text-red-600">{VALIDATION_RULES.username.message}</p>
-          )}
+          <p className="text-xs text-gray-500 mt-1">
+            Username must be alphanumeric, 4-20 characters
+          </p>
         </div>
+
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
             Password <span className="text-red-500">*</span>
-            <span className="text-xs text-gray-500 ml-2">
-              ({formData.password.length}/{VALIDATION_RULES.maxLengths.password} characters)
-            </span>
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiKey className="text-gray-400" />
+              <FiLock className="text-gray-400" />
             </div>
             <input
               id="password"
@@ -1975,66 +2192,49 @@ const AgentManagement = () => {
               className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
               placeholder="Create a password"
             />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              <FiEye className="text-gray-400 hover:text-gray-600 cursor-pointer" />
-            </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">Minimum 8 characters with numbers and symbols</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Password should be at least 8 characters
+          </p>
         </div>
       </div>
     </div>
 
     {/* Submit Button */}
-    <div className="pt-6 border-t border-gray-100">
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              className="px-6 py-3 border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition-colors"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-8 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-green-600 hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
-            >
-              <div className="flex items-center">
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FiUserPlus className="mr-2" />
-                    Register Agent
-                  </>
-                )}
-              </div>
-            </button>
-          </div>
-        </div>
-      </form>
-      
-      {/* Overlay Loading Animation */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-            <p className="text-gray-700 font-medium">Registering agent...</p>
-            <p className="text-gray-500 text-sm mt-2">Please wait, this may take a moment.</p>
-          </div>
-        </div>
-      )}
+    <div className="flex justify-end pt-6">
+      <button
+        type="button"
+        onClick={() => setShowAddForm(false)}
+        className="px-6 py-3 rounded-xl border border-gray-300 text-gray-700 mr-4 hover:bg-gray-50 transition duration-200"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className={`px-8 py-3 bg-blue-600 text-white rounded-xl flex items-center space-x-2 transition duration-200 ${
+          isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
+        }`}
+      >
+        {isLoading ? (
+          <>
+            <FiLoader className="animate-spin mr-2" />
+            <span>Registering Agent...</span>
+          </>
+        ) : (
+          <>
+            <FiUserPlus className="mr-2" />
+            <span>Register Agent</span>
+          </>
+        )}
+      </button>
     </div>
- 
+  </form>
+</div>
     );
   };
+  
+
 
   // Add ChangePlanModal component
   const ChangePlanModal = () => {

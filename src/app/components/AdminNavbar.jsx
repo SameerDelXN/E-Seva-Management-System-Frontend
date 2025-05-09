@@ -13,7 +13,7 @@ import {
 import Image from 'next/image';
 import { useSession } from '@/context/SessionContext';
 import { FiMenu } from 'react-icons/fi';
-
+import NotificationSystem from '@/components/NotificationSystem';
 const AdminNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -89,6 +89,11 @@ const AdminNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
 
         {/* Profile */}
         <div className="relative">
+      <div className='flex items-center gap-3'>
+      <div className="flex items-center">
+                                        {/* Notification Component */}
+                                        <NotificationSystem userRole="admin"  />
+                                      </div>
           <button 
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-full transition-colors"
@@ -101,8 +106,8 @@ const AdminNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
               className="w-8 h-8 rounded-full"
             />
             <span className="text-sm font-medium text-gray-700 hidden md:inline">Admin</span>
-          </button>
-
+          </button> </div>
+          
           {isProfileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
               <div className="py-2">

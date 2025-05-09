@@ -14,6 +14,8 @@ import NotificationSystem from './NotificationSystem';
 const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { session, signOut } = useSession();
+  
+  console.log("sessss = ",session)
   const router = useRouter();
   const [currentUser,setCurrentUser]=useState({
     id:"",
@@ -24,7 +26,7 @@ const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
     const handleCheckUser =()=>{
       setCurrentUser({
         name:session.user.name,
-        id:session.user.id,
+        id:session.user._id,
         role:session.user.role
       })
     }
