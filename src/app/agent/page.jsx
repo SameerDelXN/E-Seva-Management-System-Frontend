@@ -30,7 +30,10 @@ export default function ServiceGroupsUI() {
     phone: '',
     email: '',
     address: '',
-    provider: 'Agent', 
+    provider: {
+      id:'',
+      name:""
+    }, 
     date: new Date().toISOString().split('T')[0],
     delivery: calculateDeliveryDate(new Date(), 7),
     status: {
@@ -45,7 +48,10 @@ export default function ServiceGroupsUI() {
     },
     service: '',
     serviceId: '', // Add serviceId field to store the _id
-    staff: 'Not Assigned',
+    staff: {
+      id:"",
+      name:"Not Assigned"
+    },
     amount: '',
     // Changed from a single document to an array of documents
     documents: [],
@@ -307,7 +313,10 @@ console.log("select",selectedService)
       service: serviceData,
       amount: parseFloat(formData.amount),
       date: new Date(formData.date).toISOString(),
-      agentId: session?.user?._id,
+      provider: {
+        id:session?.user?._id,
+        name:session?.user?.fullName
+      },
       // Format documents for API
       document: formData.documents.map(doc => ({
         name: doc.name,
@@ -448,7 +457,6 @@ const handleViewFileChange = async (e, index) => {
     updatedDocuments[index] = {
       ...updatedDocuments[index],
       view: fileUrl,
-      name: file.name,
       // Clear the remark since we're reuploading
       remark: ''
     };

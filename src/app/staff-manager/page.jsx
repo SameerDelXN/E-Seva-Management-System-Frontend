@@ -1,9 +1,11 @@
 "use client";
 
+import { useSession } from '@/context/SessionContext';
 import { useState, useEffect } from 'react';
-import { FiRefreshCw, FiFile, FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiEye, FiPlus } from 'react-icons/fi';
+import { FiRefreshCw, FiFile,FiDownload , FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiEye, FiPlus } from 'react-icons/fi';
 
 export default function StaffManagerDashboard() {
+  const {data:session} = useSession()
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,22 +22,32 @@ export default function StaffManagerDashboard() {
   // Modal state for staff assignment
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatusHistoryModalOpen, setIsStatusHistoryModalOpen] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState(null);
   const [staffMembers, setStaffMembers] = useState([]);
   const [filteredStaffMembers, setFilteredStaffMembers] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
 
+
+ 
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+      const [detailsApplication, setDetailsApplication] = useState(null);
+   const [isDocRemarkModalOpen, setIsDocRemarkModalOpen] = useState(false);
+     const [selectedApplication, setSelectedApplication] = useState(null);
+    const [selectedDoc, setSelectedDoc] = useState(null);
+    const [docRemarks, setDocRemarks] = useState([]);
+    const [newDocRemark, setNewDocRemark] = useState("");
+    const [showViewModal, setShowViewModal] = useState(false);
+      const [showRemarkModal, setShowRemarkModal] = useState(false);
+     const [showDocumentRemarkModal, setShowDocumentRemarkModal] = useState(false);
+      const [selectedDocument, setSelectedDocument] = useState(null);
+      const [documentRemarks, setDocumentRemarks] = useState([]);
+      const [newDocumentRemark, setNewDocumentRemark] = useState("");
   // Add state for remarks
+    const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name);
   const [isRemarkModalOpen, setIsRemarkModalOpen] = useState(false);
   const [isViewRemarksModalOpen, setIsViewRemarksModalOpen] = useState(false);
   const [newRemarkText, setNewRemarkText] = useState("");
-
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [detailsApplication, setDetailsApplication] = useState(null);
-  const [isDocRemarkModalOpen, setIsDocRemarkModalOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState(null);
-  const [docRemarks, setDocRemarks] = useState([]);
-  const [newDocRemark, setNewDocRemark] = useState("");
+    const [currentRemark, setCurrentRemark] = useState("");
+    const [selectedApplicationId, setSelectedApplicationId] = useState(null);
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
@@ -199,9 +211,82 @@ console.log("appi",applications)
       alert("Failed to update status. Please try again.");
     }
   };
+  const addDocumentRemark = async () => {
+  if (!newDocumentRemark.trim()) return;
+  
+  try {
+    // Find the current document in the application and update it with the new remark
+    const updatedDocuments = selectedApplication.document.map(doc => {
+      if (doc._id === selectedDocument._id) {
+        return { 
+          ...doc, 
+          remark: newDocumentRemark 
+        };
+      }
+      return doc;
+    });
+    
+    // Create new remark history entry
+    const newRemarkHistory = {
+      text: newDocumentRemark,
+      documentId: selectedDocument._id,
+      addedBy: session?.user?._id,
+      addedAt: new Date()
+    };
 
+    // Prepare the update payload
+    const updatePayload = {
+      ...selectedApplication,
+      document: updatedDocuments,
+      remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
+    };
+
+    const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update remarks');
+    }
+
+    const updatedApplication = await response.json();
+    
+    // Update local state
+    setApplications(applications.map(app => 
+      app._id === selectedApplication._id ? updatedApplication : app
+    ));
+
+    // Update the selected application state
+    setSelectedApplication(updatedApplication);
+
+    // Update document remarks in the modal
+    setDocumentRemarks([newDocumentRemark]);
+    
+    // Clear input field
+    setNewDocumentRemark("");
+    
+    // Show success message
+    alert('Remark added successfully');
+    setShowDocumentRemarkModal(false)
+    setShowViewModal(false)
+
+    fetchApplications()
+  } catch (err) {
+    console.error("Error adding document remark:", err);
+    alert("Failed to add remark. Please try again.");
+  }
+};
+   const openRemarkModal = (application) => {
+    setSelectedApplicationId(application?._id);
+    setCurrentRemark(application?.remark || "");
+    setShowRemarkModal(true);
+  };
   // Update staff assignment
-  const updateAssignment = async (applicationId, staffName) => {
+  const updateAssignment = async (applicationId, staffId, staffName) => {
     try {
       const response = await fetch(`${API_BASE_URL}/update/${applicationId}`, {
         method: 'PUT',
@@ -209,7 +294,10 @@ console.log("appi",applications)
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          staff: staffName 
+          staff: {
+            name: staffName,
+            id: staffId
+          } 
         }),
       });
       
@@ -262,7 +350,10 @@ console.log("appi",applications)
     const statusOption = allStatusOptions.find(option => option.name === currentStatusName);
     setShowReasonField(statusOption?.askreason || false);
   };
-
+   const openViewModal = (application) => {
+    setSelectedApplication(application);
+    setShowViewModal(true);
+  };
   const cancelEditStatus = () => {
     setEditingStatusId(null);
     setEditingStatus("");
@@ -270,7 +361,30 @@ console.log("appi",applications)
     setShowReasonField(false);
     setCombinedStatusOptions([]);
   };
-
+   const openDocumentRemarkModal = (document, application) => {
+  // Find the document object from the application.document array
+  // This is where the issue was - we need to properly find the document
+  const docObj = application.document.find(doc => doc._id === document._id);
+  
+  setSelectedDocument({
+    _id: document._id,
+    name: document.name,
+    remark: docObj?.remark || ""
+  });
+  
+  // Set selected application for context
+  setSelectedApplication(application);
+  
+  // If there is a remark, add it to documentRemarks array
+  // This ensures we properly display existing remarks
+  if (docObj?.remark) {
+    setDocumentRemarks([docObj.remark]);
+  } else {
+    setDocumentRemarks([]);
+  }
+  
+  setShowDocumentRemarkModal(true);
+};
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
     setEditingStatus(newStatus);
@@ -289,6 +403,14 @@ console.log("appi",applications)
   
   const getCurrentStatus = (application) => {
     return application.initialStatus?.[0]?.name || "Initiated";
+  };
+  
+  // Function to get staff name display (handles both string and object)
+  const getStaffName = (staff) => {
+    if (!staff) return "Not Assigned";
+    if (typeof staff === 'string') return staff;
+    if (typeof staff === 'object') return staff[0].name || "Not Assigned";
+    return "Not Assigned";
   };
   
   // Add a new remark to application
@@ -390,57 +512,55 @@ console.log("appi",applications)
   };
 
   // Add a remark to a document
-  // Add a remark to a document
-const addDocRemark = async (applicationId,documentId) => {
-  if (!newDocRemark.trim() || !selectedDoc || !detailsApplication) return;
-  
-  try {
-    // Create the updated document array with the new remark
-    const updatedDocuments = detailsApplication.document.map(doc => {
-      if (doc._id === selectedDoc) {
-        // Add the new remark to the document's remarks array
-       
-        return {
-          ...doc,
-          remark: newDocRemark
-        };
-      }
-      return doc;
-    });
+  const addDocRemark = async () => {
+    if (!newDocRemark.trim() || !selectedDoc || !detailsApplication) return;
+    
+    try {
+      // Create the updated document array with the new remark
+      const updatedDocuments = detailsApplication.document.map(doc => {
+        if (doc._id === selectedDoc) {
+          // Add the new remark to the document's remarks array
+          return {
+            ...doc,
+            remark: newDocRemark
+          };
+        }
+        return doc;
+      });
 
-    // Prepare the form data to send to the backend
-    const updatePayload = {
-      ...detailsApplication,
-      document: updatedDocuments
-    };
+      // Prepare the form data to send to the backend
+      const updatePayload = {
+        ...detailsApplication,
+        document: updatedDocuments
+      };
 
-    const response = await fetch(`${API_BASE_URL}/update/${detailsApplication._id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatePayload),
-    });
-    console.log(response)
-    if (!response.ok) throw new Error(`Failed to add document remark: ${response.status}`);
-    
-    const updatedApplication = await response.json();
-    
-    // Update the local state
-    setDetailsApplication(updatedApplication);
-    setApplications(applications.map(app => 
-      app._id === updatedApplication._id ? updatedApplication : app
-    ));
-    
-    // Reset the remark input and close the modal
-    setNewDocRemark("");
-    setIsDocRemarkModalOpen(false);
-    
-  } catch (err) {
-    console.error("Error adding document remark:", err);
-    alert("Failed to add document remark. Please try again.");
-  }
-};
+      const response = await fetch(`${API_BASE_URL}/update/${detailsApplication._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      });
+      console.log(response)
+      if (!response.ok) throw new Error(`Failed to add document remark: ${response.status}`);
+      
+      const updatedApplication = await response.json();
+      
+      // Update the local state
+      setDetailsApplication(updatedApplication);
+      setApplications(applications.map(app => 
+        app._id === updatedApplication._id ? updatedApplication : app
+      ));
+      
+      // Reset the remark input and close the modal
+      setNewDocRemark("");
+      setIsDocRemarkModalOpen(false);
+      
+    } catch (err) {
+      console.error("Error adding document remark:", err);
+      alert("Failed to add document remark. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -618,7 +738,7 @@ const addDocRemark = async (applicationId,documentId) => {
                               <div className="flex items-center space-x-2">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                   ${!application.staff || application.staff === "Not Assigned" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
-                                  {application.staff || "Not Assigned"}
+                                  {getStaffName(application.staff)}
                                 </span>
                                 <button 
                                   onClick={() => handleAssignStaff(application)}
@@ -629,7 +749,7 @@ const addDocRemark = async (applicationId,documentId) => {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <button onClick={() => handleViewDetails(application)} className="text-blue-600 hover:text-blue-900">
+                              <button onClick={() => openViewModal(application)} className="text-blue-600 hover:text-blue-900">
                                 <FiEye />
                               </button>
                             </td>
@@ -679,9 +799,15 @@ const addDocRemark = async (applicationId,documentId) => {
                   filteredStaffMembers.map(staff => (
                     <button
                       key={staff.id}
-                      onClick={() => updateAssignment(selectedApplication._id, staff.id)}
+                      onClick={() => updateAssignment(selectedApplication._id, staff.id, staff.name)}
                       className={`w-full flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 
-                        ${selectedApplication.staff === staff.name ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}
+                        ${
+                          // Compare staff name with the application's assigned staff
+                          (typeof selectedApplication.staff === 'object' && selectedApplication.staff?.name === staff.name) ||
+                          selectedApplication.staff === staff.name
+                            ? 'border-indigo-500 bg-indigo-50' 
+                            : 'border-gray-200'
+                        }`}
                     >
                       <div className="flex items-center">
                         <FiUser className="h-5 w-5 text-gray-500 mr-3" />
@@ -709,71 +835,25 @@ const addDocRemark = async (applicationId,documentId) => {
           </div>
         )}
 
-        {/* Status History Modal */}
-        {isStatusHistoryModalOpen && selectedApplication && (
+       {isStatusHistoryModalOpen && selectedApplication && (
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Status History for {selectedApplication.name}
-                </h3>
-                <button 
-                  onClick={() => setIsStatusHistoryModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-800"
-                >
-                  <FiX className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Status History
+              </h3>
               
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {selectedApplication.initialStatus?.[0] && (
-                  <div className="border border-green-300 bg-green-50 p-3 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="font-medium">Current Status: </span>
-                        <StatusBadge 
-                          status={selectedApplication.initialStatus[0].name} 
-                          hexcode={selectedApplication.initialStatus[0].hexcode} 
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {new Date(selectedApplication.initialStatus[0].updatedAt).toLocaleString()}
-                      </span>
-                    </div>
-                    {selectedApplication.initialStatus[0].reason && (
-                      <div className="mt-2 text-sm text-gray-700">
-                        <span className="font-medium">Reason: </span>
-                        {selectedApplication.initialStatus[0].reason}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {selectedApplication.statusHistory?.length > 0 ? (
-                  selectedApplication.statusHistory.slice().reverse().map((status, index) => (
-                    <div key={index} className="border border-gray-200 p-3 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="font-medium">Status: </span>
-                          <StatusBadge 
-                            status={status.name} 
-                            hexcode={status.hexcode} 
-                          />
-                        </div>
+                {selectedApplication.statusHistory && selectedApplication.statusHistory.length > 0 ? (
+                  [...selectedApplication.statusHistory].reverse().map((status, idx) => (
+                    <div key={idx} className="border-l-4 pl-3 py-2" style={{borderColor: status.hexcode || '#CBD5E0'}}>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-gray-900">{status.name}</span>
                         <span className="text-xs text-gray-500">
                           {new Date(status.updatedAt).toLocaleString()}
                         </span>
                       </div>
                       {status.reason && (
-                        <div className="mt-2 text-sm text-gray-700">
-                          <span className="font-medium">Reason: </span>
-                          {status.reason}
-                        </div>
-                      )}
-                      {status.updatedBy && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          Updated by: {status.updatedBy}
-                        </div>
+                        <p className="text-sm text-gray-600 mt-1">Reason: {status.reason}</p>
                       )}
                     </div>
                   ))
@@ -783,118 +863,11 @@ const addDocRemark = async (applicationId,documentId) => {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Remark Modal */}
-        {isDocRemarkModalOpen && (
-  <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
-        Document Remarks
-      </h3>
-      <div className="max-h-60 overflow-y-auto mb-4">
-        {docRemarks.length > 0 ? (
-          <ul className="space-y-3">
-            {docRemarks.map((remark, idx) => (
-              <li key={idx} className="border-b border-gray-100 pb-2">
-                <p className="text-sm text-gray-800">{remark.text}</p>
-                <div className="flex justify-between mt-1">
-                  <span className="text-xs text-gray-500">
-                    {remark.createdBy || 'Staff'} - {new Date(remark.date).toLocaleString()}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-center py-4 text-gray-500">No remarks available</div>
-        )}
-      </div>
-      <textarea
-        value={newDocRemark}
-        onChange={e => setNewDocRemark(e.target.value)}
-        rows={3}
-        className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md mb-3"
-        placeholder="Add a remark about this document..."
-      />
-      <div className="flex justify-end space-x-3">
-        <button 
-          onClick={() => {
-            setIsDocRemarkModalOpen(false);
-            setNewDocRemark("");
-          }} 
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
-        >
-          Cancel
-        </button>
-        <button 
-          onClick={addDocRemark} 
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" 
-          disabled={!newDocRemark.trim()}
-        >
-          Add Remark
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-        {/* View Remarks Modal */}
-        {isViewRemarksModalOpen && selectedApplication && (
-          
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Remarks for {selectedApplication.name}
-              </h3>
               
-              <div className="max-h-96 overflow-y-auto">
-                {selectedApplication.remarks && selectedApplication.remarks.length > 0 ? (
-                  <ul className="space-y-4">
-                    {selectedApplication.remarks.map((remark, index) => (
-                      <li key={index} className="border-b border-gray-100 pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-800">{remark.text}</p>
-                            <div className="flex items-center mt-1">
-                              <span className="text-xs text-gray-500">
-                                {remark.createdBy || 'Staff'} - {new Date(remark.createdAt).toLocaleDateString()}
-                              </span>
-                              {remark.updatedAt && (
-                                <span className="text-xs text-gray-400 ml-2">
-                                  (Updated: {new Date(remark.updatedAt).toLocaleDateString()})
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : selectedApplication.remark ? (
-                  // Display old remark format if available
-                  <div className="border-b border-gray-100 pb-3">
-                    <p className="text-sm text-gray-800">{selectedApplication.remark}</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    No remarks available
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-5 flex justify-between">
+              <div className="mt-6 flex justify-end">
                 <button
-                  onClick={() => handleAddRemark(selectedApplication)}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
-                >
-                  <FiPlus className="mr-1" /> Add New
-                </button>
-                <button
-                  onClick={() => setIsViewRemarksModalOpen(false)}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
+                  onClick={() => setIsStatusHistoryModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Close
                 </button>
@@ -902,164 +875,328 @@ const addDocRemark = async (applicationId,documentId) => {
             </div>
           </div>
         )}
-{/* Details Modal */}
-{isDetailsModalOpen && detailsApplication && (
-  <div className="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm transition-all duration-300">
-    <div className="bg-white rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-medium text-gray-900">
-          <span className="text-sm font-normal text-gray-500 block mb-1">Application Details</span>
-          {detailsApplication.name}
-        </h3>
-        <button 
-          onClick={() => setIsDetailsModalOpen(false)} 
-          className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
 
-      {/* Applicant Info Section */}
-      <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Name</p>
-            <p className="font-medium text-gray-900">{detailsApplication.name}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Phone Number</p>
-            <p className="font-medium text-gray-900">{detailsApplication.phone}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Date</p>
-            <p className="font-medium text-gray-900">{detailsApplication.date ? new Date(detailsApplication.date).toLocaleDateString() : ''}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="space-y-4">
-          {/* Removed phone number and address from here */}
-        </div>
-        
-        <div className="bg-gray-50 rounded-lg p-4">
-  <p className="text-sm font-medium text-gray-700 mb-3">Submitted Documents</p>
-  <div className="space-y-3">
-    {detailsApplication?.document?.map(doc => (
-      <div key={doc._id} className="flex flex-col group">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <svg className="h-4 w-4 text-blue-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            <span className="text-sm">{doc.name}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <a 
-              href={doc.view} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-blue-600 text-sm font-medium hover:text-blue-800 transition-colors"
-            >
-              View
-            </a>
-            <button
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-md transition-colors"
-              onClick={() => {
-                setSelectedDoc(doc._id);
-                setDocRemarks(doc.remarks || []);
-                setIsDocRemarkModalOpen(true);
-              }}
-            >
-              {doc.remarks?.length ? `Remarks (${doc.remarks.length})` : 'Add Remark'}
-            </button>
-          </div>
-        </div>
-        {doc.remarks?.length > 0 && (
-          <div className="ml-6 mt-1 text-xs text-gray-500">
-            Latest remark: {doc.remarks[doc.remarks.length - 1].text}
-          </div>
-        )}
-      </div>
-    ))}
-  </div>
-</div>
-      </div>
-
-      <div className="flex justify-end pt-4 border-t border-gray-100">
-        <button 
-          onClick={() => setIsDetailsModalOpen(false)} 
-          className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors mr-3"
-        >
-          Close
-        </button>
-        <button 
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Approve Application
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-        {/* Document Remark Modal */}
-        {isDocRemarkModalOpen && (
+        {/* Add Remark Modal */}
+        {isRemarkModalOpen && selectedApplication && (
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Remarks for {selectedDoc}
+                Add Remark to Application
               </h3>
-              <div className="max-h-60 overflow-y-auto mb-4">
-                {docRemarks.length > 0 ? (
-                  <ul className="space-y-2">
-                    {docRemarks.map((remark, idx) => (
-                      <li key={idx} className="border-b border-gray-100 pb-2">
-                        <p className="text-sm text-gray-800">{remark.text}</p>
-                        <span className="text-xs text-gray-500">{new Date(remark.date).toLocaleString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">No remarks available</div>
-                )}
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Remark
+                </label>
+                <textarea
+                  value={newRemarkText}
+                  onChange={(e) => setNewRemarkText(e.target.value)}
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter your remark here..."
+                />
               </div>
-              <textarea
-                value={newDocRemark}
-                onChange={e => setNewDocRemark(e.target.value)}
-                rows={2}
-                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md mb-2"
-                placeholder="Add a remark..."
-              />
-              <div className="flex justify-end space-x-3">
-                <button onClick={() => setIsDocRemarkModalOpen(false)} className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200">Close</button>
-                <button onClick={addDocRemark} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700" disabled={!newDocRemark.trim()}>Add Remark</button>
+              
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsRemarkModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addRemark}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Save Remark
+                </button>
               </div>
             </div>
           </div>
         )}
+
+        {showRemarkModal && (
+               <div className="fixed inset-0 z-10 overflow-y-auto">
+                 <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                   <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                     <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                   </div>
+       
+                   <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+       
+                   <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                     <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                       <div className="sm:flex sm:items-start">
+                         <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                           <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                             Add Remark
+                           </h3>
+                           <div className="mt-4 w-full">
+                             <textarea
+                               className="w-full h-32 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
+                               rows="4"
+                               placeholder="Enter your remark here..."
+                               value={currentRemark}
+                               onChange={(e) => setCurrentRemark(e.target.value)}
+                             ></textarea>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                       <button
+                         type="button"
+                         className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                         onClick={() => updateRemark(selectedApplicationId, currentRemark)}
+                       >
+                         Save
+                       </button>
+                       <button
+                         type="button"
+                         className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                         onClick={() => setShowRemarkModal(false)}
+                       >
+                         Cancel
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+       
+             {/* Add View Modal */}
+             {showViewModal && selectedApplication && (
+               <div className="fixed inset-0 z-50 overflow-y-auto">
+                 <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                   <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                     <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                   </div>
+       
+                   <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+       
+                   <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                     <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                       <div className="sm:flex sm:items-start">
+                         <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                           <div className="flex justify-between items-center mb-6">
+                             <h3 className="text-xl font-semibold text-gray-900">
+                               Application Details
+                             </h3>
+                             <button
+                               onClick={() => setShowViewModal(false)}
+                               className="text-gray-400 hover:text-gray-500"
+                             >
+                               <FiX className="h-6 w-6" />
+                             </button>
+                           </div>
+                           
+                           {/* Applicant Information */}
+                           <div className="grid grid-cols-2 gap-4 mb-6">
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Applicant Name</h4>
+                               <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.name}</p>
+                             </div>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Application Date</h4>
+                               <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.date}</p>
+                             </div>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Service Type</h4>
+                               <p className="mt-1 text-sm font-medium text-gray-900">
+                                 {typeof selectedApplication.service === 'object' 
+                                   ? selectedApplication.service.name 
+                                   : selectedApplication.service}
+                               </p>
+                             </div>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
+                               <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.delivery}</p>
+                             </div>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Amount</h4>
+                               <p className="mt-1 text-sm font-medium text-gray-900">₹{selectedApplication.amount}</p>
+                             </div>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                               <h4 className="text-sm font-medium text-gray-500">Status</h4>
+                               <div className="mt-1">
+                                 <StatusBadge 
+                                   status={getCurrentStatus(selectedApplication)} 
+                                   hexcode={selectedApplication.initialStatus?.[0]?.hexcode} 
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                           
+                           {/* Documents Section */}
+                           <div className="mb-6">
+                             <h4 className="text-lg font-medium text-gray-700 mb-3">Documents</h4>
+                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                               {selectedApplication.document && selectedApplication.document.length > 0 ? (
+                                 <div className="space-y-3">
+                                   {selectedApplication.document.map((doc, index) => (
+                                     <div key={doc._id || index} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                                       <div className="flex items-center">
+                                         <FiFile className="text-indigo-500 mr-2" />
+                                         <span className="text-sm font-medium">{doc.name || `Document ${index + 1}`}</span>
+                                       </div>
+                                       <div className="flex items-center space-x-2">
+                                         <button
+                                           onClick={() => openDocumentRemarkModal(doc, selectedApplication)}
+                                           className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded flex items-center"
+                                         >
+                                           <FiMessageSquare className="mr-1 h-3 w-3" /> 
+                                           {doc.remark ? "View Remark" : "Add Remark"}
+                                         </button>
+                                         <button
+                                           className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center"
+                                         >
+                                           <FiDownload className="mr-1 h-3 w-3" /> Download
+                                         </button>
+                                       </div>
+                                     </div>
+                                   ))}
+                                 </div>
+                               ) : (
+                                 <p className="text-sm text-gray-500">No documents uploaded</p>
+                               )}
+                             </div>
+                           </div>
+                           
+                           {/* Remarks Section */}
+                           <div className="mb-6">
+                             <h4 className="text-lg font-medium text-gray-700 mb-3">Application Remarks</h4>
+                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                               {selectedApplication.remark ? (
+                                 <div className="bg-white p-3 rounded border border-gray-200">
+                                   <p className="text-sm">{selectedApplication.remark}</p>
+                                   <div className="mt-2 flex items-center text-xs text-gray-500">
+                                     <FiUserCheck className="mr-1" />
+                                     <span>
+                                       Added by: {currentStaffName || "Staff"} 
+                                     </span>
+                                   </div>
+                                 </div>
+                               ) : (
+                                 <div className="text-center py-4">
+                                   <p className="text-sm text-gray-500">No remarks added</p>
+                                   <button
+                                     onClick={() => openRemarkModal(selectedApplication)}
+                                     className="mt-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded flex items-center mx-auto"
+                                   >
+                                     <FiMessageSquare className="mr-1 h-4 w-4" /> Add Remark
+                                   </button>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                       <button
+                         type="button"
+                         className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                         onClick={() => setShowViewModal(false)}
+                       >
+                         Close
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+       
+             {/* Document Remark Modal */}
+          {showDocumentRemarkModal && selectedDocument && (
+         <div className="fixed inset-0 z-50 overflow-y-auto">
+           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+             </div>
+       
+             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+       
+             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                 <div className="sm:flex sm:items-start">
+                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                     <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                       {selectedDocument.name} - Document Remarks
+                     </h3>
+                     
+                     {/* Existing remarks section - Fixed to properly display remarks */}
+                     <div className="mt-4 max-h-40 overflow-y-auto">
+                       {documentRemarks.length > 0 ? (
+                         documentRemarks.map((remark, index) => (
+                           <div key={index} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+                             <p className="text-sm">{remark}</p>
+                            
+                           </div>
+                         ))
+                       ) : (
+                         <p className="text-sm text-gray-500 italic">No remarks added for this document</p>
+                       )}
+                     </div>
+                     
+                     {/* Add new remark section */}
+                     <div className="mt-4 w-full">
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Add New Remark
+                       </label>
+                       <textarea
+                         className="w-full h-24 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
+                         rows="3"
+                         placeholder="Enter document remark here..."
+                         value={newDocumentRemark}
+                         onChange={(e) => setNewDocumentRemark(e.target.value)}
+                       ></textarea>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                 <button
+                   type="button"
+                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                   onClick={addDocumentRemark}
+                 >
+                   Save Remark
+                 </button>
+                 <button
+                   type="button"
+                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                   onClick={() => setShowDocumentRemarkModal(false)}
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
       </div>
     </div>
   );
 }
 
+// StatCard Component
 function StatCard({ title, value, icon, color }) {
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
+      <div className="p-5">
         <div className="flex items-center">
-          <div className={`flex-shrink-0 rounded-md p-3 ${color}`}>
+          <div className={`flex-shrink-0 ${color} rounded-md p-3`}>
             {icon}
           </div>
           <div className="ml-5 w-0 flex-1">
-            <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-              <dd>
-                <div className="text-lg font-medium text-gray-900">{value}</div>
-              </dd>
-            </dl>
+            <dt className="text-sm font-medium text-gray-500 truncate">
+              {title}
+            </dt>
+            <dd className="flex items-baseline">
+              <div className="text-2xl font-semibold text-gray-900">
+                {value}
+              </div>
+            </dd>
           </div>
         </div>
       </div>
@@ -1067,40 +1204,29 @@ function StatCard({ title, value, icon, color }) {
   );
 }
 
-function StatusBadge({ status, hexcode = null }) {
-  const defaultColors = {
-    "Active": "#4CAF50",
-    "pending": "#cbb62a",
-    "final": "#1db7b9",
-    "Initiated": "#A78BFA",
-    "In Progress": "#F59E0B",
-    "Completed": "#10B981",
-    "Rejected": "#EF4444",
-    "On Hold": "#6B7280",
-    "Pending": "#3B82F6",
-    "Cancelled": "#1F2937"
-  };
-
-  const colorHex = hexcode || defaultColors[status] || "#A78BFA";
-  
-  const isLightColor = (hexColor) => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    return ((r * 299) + (g * 587) + (b * 114)) / 1000 >= 128;
+// StatusBadge Component
+function StatusBadge({ status, hexcode }) {
+  // Default color based on status names, fallback to hexcode if provided
+  const getDefaultColor = (status) => {
+    switch(status.toLowerCase()) {
+      case 'completed': return '#10B981'; // green
+      case 'in progress': return '#F59E0B'; // yellow
+      case 'initiated': return '#6366F1'; // indigo
+      case 'on hold': return '#EF4444'; // red
+      case 'rejected': return '#EF4444'; // red
+      case 'cancelled': return '#6B7280'; // gray
+      default: return '#6366F1'; // indigo as default
+    }
   };
   
-  const textColor = isLightColor(colorHex) ? '#1F2937' : '#FFFFFF';
+  const bgColor = hexcode || getDefaultColor(status);
   
   return (
-    <span 
-      className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
       style={{ 
-        backgroundColor: colorHex,
-        color: textColor
-      }}
-    >
+        backgroundColor: `${bgColor}20`, // 20% opacity of the color
+        color: bgColor 
+      }}>
       {status}
     </span>
   );
