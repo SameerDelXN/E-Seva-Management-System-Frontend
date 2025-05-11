@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { FiRefreshCw, FiFile,FiDownload , FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiEye, FiPlus } from 'react-icons/fi';
 
 export default function StaffManagerDashboard() {
-  const {data:session} = useSession()
+  const {session} = useSession()
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,12 +59,12 @@ export default function StaffManagerDashboard() {
     inProgress: 0,
     completed: 0
   });
-
+  console.log("sess = ",session)
   // Fetch all applications
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/read`);
+      const response = await fetch(`${API_BASE_URL}/filter?location=${session?.user?.city}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch applications: ${response.status}`);

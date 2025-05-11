@@ -30,6 +30,7 @@ export default function ServiceGroupsUI() {
     phone: '',
     email: '',
     address: '',
+    location:session?.user?.location,
     provider: {
       id:'',
       name:""
