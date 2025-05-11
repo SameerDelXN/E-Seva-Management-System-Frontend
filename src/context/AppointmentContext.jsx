@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const AppointmentContext = createContext();
 
@@ -18,6 +18,39 @@ export const AppointmentProvider = ({ children }) => {
       address: ''
     }
   });
+
+  // Function to check if a specific step is complete
+  const isStepComplete = useCallback((step) => {
+    switch (step) {
+      case 'select-service':
+        return !!appointmentData.service;
+      case 'date-time':
+        return !!appointmentData.date && !!appointmentData.time;
+      case 'details':
+        return (
+          appointmentData.personalDetails.firstName &&
+          appointmentData.personalDetails.lastName &&
+          appointmentData.personalDetails.email &&
+          appointmentData.personalDetails.phone
+        );
+      default:
+        return false;
+    }
+  }, [appointmentData]);
+
+  // Function to validate if a step can be accessed
+  const canAccessStep = useCallback((step) => {
+    const stepOrder = ['select-service', 'date-time', 'details', 'summary'];
+    const currentStepIndex = stepOrder.indexOf(step);
+    
+    // All steps before the current one must be completed
+    for (let i = 0; i < currentStepIndex; i++) {
+      if (!isStepComplete(stepOrder[i])) {
+        return false;
+      }
+    }
+    return true;
+  }, [isStepComplete]);
 
   const updateCategory = (category) => {
     setAppointmentData(prev => ({
@@ -72,6 +105,8 @@ export const AppointmentProvider = ({ children }) => {
     <AppointmentContext.Provider 
       value={{
         appointmentData,
+        isStepComplete,
+        canAccessStep,
         updateCategory,
         updateService,
         updateDateTime,

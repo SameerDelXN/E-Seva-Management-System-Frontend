@@ -523,13 +523,57 @@
 
 // export default AppointmentStepsLayout;
 
-
 "use client";
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { AppointmentProvider } from '@/context/AppointmentContext';
+import { usePathname, useRouter } from 'next/navigation';
+import { AppointmentProvider, useAppointment } from '@/context/AppointmentContext';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Navigation guard wrapper component
+const NavigationGuard = ({ children }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { appointment, isStepComplete } = useAppointment();
+  
+  // useEffect(() => {
+  //   // Define step validation logic
+  //   const validateNavigation = () => {
+  //     // If trying to access date-time but service not selected
+  //     if (pathname.includes('date-time') && !isStepComplete('select-service')) {
+  //       router.push('/appointment/select-service');
+  //       return;
+  //     }
+      
+  //     // // If trying to access personal-details but date-time not completed
+  //     // if (pathname.includes('details') && (!isStepComplete('select-service') || !isStepComplete('date-time'))) {
+  //     //   if (!isStepComplete('select-service')) {
+  //     //     router.push('/appointment/select-service');
+  //     //   } else {
+  //     //     router.push('/appointment/date-time');
+  //     //   }
+  //     //   return;
+  //     // }
+      
+  //     // // If trying to access summary but previous steps not completed
+  //     // if (pathname.includes('summary') && 
+  //     //     (!isStepComplete('select-service') || !isStepComplete('date-time') || !isStepComplete('details'))) {
+  //     //   if (!isStepComplete('select-service')) {
+  //     //     router.push('/appointment/select-service');
+  //     //   } else if (!isStepComplete('date-time')) {
+  //     //     router.push('/appointment/date-time');
+  //     //   } else {
+  //     //     router.push('/appointment/personal-details');
+  //     //   }
+  //     //   return;
+  //     // }
+  //   };
+    
+  //   validateNavigation();
+  // }, [pathname, isStepComplete, router]);
+  
+  return children;
+}
 
 const AppointmentStepsLayout = ({ children }) => {
   const pathname = usePathname();
@@ -537,7 +581,7 @@ const AppointmentStepsLayout = ({ children }) => {
   const getStepStatus = (stepPath) => {
     if (pathname.endsWith(stepPath)) return 'active';
     if (
-      (stepPath === 'select-service' && pathname !== '/demo-appointment/select-service') ||
+      (stepPath === 'select-service' && pathname !== '/appointment/select-service') ||
       (stepPath === 'date-time' && pathname.includes('details')) ||
       (stepPath === 'details' && pathname.includes('summary'))
     ) {
@@ -586,7 +630,7 @@ const AppointmentStepsLayout = ({ children }) => {
                   </svg>
                 }
                 status={getStepStatus('select-service')}
-                href="/demo-appointment/select-service"
+                href="/appointment/select-service"
                 delay={0.4}
                 isMobile={true}
               />
@@ -600,7 +644,7 @@ const AppointmentStepsLayout = ({ children }) => {
                   </svg>
                 }
                 status={getStepStatus('date-time')}
-                href="/appointment/steps/date-time"
+                href="/appointment/date-time"
                 delay={0.5}
                 isMobile={true}
               />
@@ -614,7 +658,7 @@ const AppointmentStepsLayout = ({ children }) => {
                   </svg>
                 }
                 status={getStepStatus('details')}
-                href="/demo-appointment/personal-information"
+                href="/appointment/personal-details"
                 delay={0.6}
                 isMobile={true}
               />
@@ -628,7 +672,7 @@ const AppointmentStepsLayout = ({ children }) => {
                   </svg>
                 }
                 status={getStepStatus('summary')}
-                href="/appointment/steps/summary"
+                href="/appointment/summary"
                 delay={0.7}
                 isMobile={true}
               />
@@ -647,7 +691,9 @@ const AppointmentStepsLayout = ({ children }) => {
               transition={{ duration: 0.4, ease: "easeInOut" }}
               className="bg-white rounded-xl lg:rounded-2xl shadow-md lg:shadow-lg p-4 lg:p-8 h-full border border-green-100"
             >
-              {children}
+              <NavigationGuard>
+                {children}
+              </NavigationGuard>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -657,12 +703,27 @@ const AppointmentStepsLayout = ({ children }) => {
 };
 
 const StepItem = ({ stepNumber, title, icon, status, href, delay = 0, isMobile = false }) => {
+  const { isStepComplete } = useAppointment();
+  const isDisabled = 
+    (href === '/appointment/date-time' && !isStepComplete('select-service')) ||
+    (href === '/appointment/personal-details' && (!isStepComplete('select-service') || !isStepComplete('date-time'))) ||
+    (href === '/appointment/summary' && (!isStepComplete('select-service') || !isStepComplete('date-time') || !isStepComplete('details')));
+  
   const bgColor = status === 'active' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 
                  status === 'completed' ? 'bg-green-100' : 'bg-gray-100';
   const textColor = status === 'active' ? 'text-white' : 
                    status === 'completed' ? 'text-green-600' : 'text-gray-400';
-  const titleColor = status === 'active' ? 'text-gray-900 font-semibold' : 'text-gray-500';
+  const titleColor = status === 'active' ? 'text-gray-900 font-semibold' : 
+                    isDisabled ? 'text-gray-300' : 'text-gray-500';
   const statusText = status === 'active' ? 'Current Step' : '';
+  
+  // Wrapper component that conditionally renders a div or a link
+  const LinkOrDiv = ({ children }) => {
+    if (isDisabled) {
+      return <div className="flex items-start w-full cursor-not-allowed">{children}</div>;
+    }
+    return <Link href={href} className="flex items-start w-full">{children}</Link>;
+  };
   
   return (
     <motion.div 
@@ -671,9 +732,9 @@ const StepItem = ({ stepNumber, title, icon, status, href, delay = 0, isMobile =
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay, duration: 0.5 }}
     >
-      <Link href={href} className="flex items-start w-full">
+      <LinkOrDiv>
         <motion.div 
-          className={`flex-shrink-0 w-10 h-10 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl ${bgColor} flex items-center justify-center z-10 shadow-md group-hover:shadow-lg transition-all duration-300`}
+          className={`flex-shrink-0 w-10 h-10 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl ${bgColor} flex items-center justify-center z-10 shadow-md ${isDisabled ? 'opacity-50' : 'group-hover:shadow-lg'} transition-all duration-300`}
           animate={{
             scale: status === 'active' ? [1, 1.05, 1] : 1,
             transition: status === 'active' ? { 
@@ -710,8 +771,11 @@ const StepItem = ({ stepNumber, title, icon, status, href, delay = 0, isMobile =
               {statusText}
             </motion.p>
           )}
+          {isDisabled && (
+            <span className="text-xs mt-1 text-gray-300">Complete previous steps first</span>
+          )}
         </div>
-      </Link>
+      </LinkOrDiv>
       {!isMobile && stepNumber < 4 && (
         <motion.div 
           className="absolute top-14 left-7 w-0.5 h-16 bg-gradient-to-b from-green-200 to-transparent"

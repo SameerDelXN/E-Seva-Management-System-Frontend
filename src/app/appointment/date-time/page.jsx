@@ -1,34 +1,23 @@
-// 
-
-
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppointment } from '@/context/AppointmentContext';
+import { format, addMonths, isAfter, isSameDay, startOfToday } from 'date-fns';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
 
 const DateTimeSelection = () => {
   const router = useRouter();
   const { updateDateTime, appointmentData } = useAppointment();
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-
-  const daysOfWeek = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  const [month, setMonth] = useState(new Date());
   
-  // Generate calendar data
-  const generateCalendarData = () => {
-    // This is a simplified version - in a real app, you would use a proper date library
-    return [
-      [null, 30, 31, 1, 2, 3, 4, 5],
-      [null, 6, 7, 8, 9, 10, 11, 12],
-      [null, 13, 14, 15, 16, 17, 18, 19],
-      [null, 20, 21, 22, 23, 24, 25, 26],
-      [null, 27, 28, 29, 30, 31, 1, 2],
-      [null, 3, 4, 5, 6, 7, 8, 9]
-    ];
-  };
+  const today = startOfToday();
 
-  const calendar = generateCalendarData();
+  // Disable past dates
+  const disabledDays = { before: today };
 
   const morningSlots = [
     { time: '10:00 AM', available: true },
@@ -51,30 +40,30 @@ const DateTimeSelection = () => {
     { time: '09:00 PM', available: true }
   ];
 
-  const handleDateSelect = (weekIndex, day) => {
-    setSelectedDate({ weekIndex, day });
+  const handleDateSelect = (day) => {
+    setSelectedDate(day);
+    setSelectedTime(null); // Reset time when date changes
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
   };
   
-  const formatSelectedDate = ({ weekIndex, day }) => {
-    if (!day) return '';
-  
-    // Assuming current month/year (can be improved later)
-    const currentMonth = 0; // 0 = January
-    const currentYear = 2025;
-  
-    const dateObj = new Date(currentYear, currentMonth, day);
-    const options = { day: 'numeric', month: 'short', year: 'numeric' };
-    return dateObj.toLocaleDateString('en-GB', options); // e.g., "22 Jan 2025"
+  const formatSelectedDate = (date) => {
+    if (!date) return '';
+    return format(date, 'd MMM yyyy'); // e.g., "22 Jan 2025"
   };
   
   const handleNext = () => {
     const formattedDate = formatSelectedDate(selectedDate);
     updateDateTime({ date: formattedDate, time: selectedTime });
     router.push('/appointment/personal-details');
+  };
+
+  // Custom CSS styles for the calendar
+  const calendarStyles = {
+    '--rdp-accent-color': '#3b82f6', // blue-500
+    '--rdp-background-color': '#eff6ff', // blue-50
   };
 
   return (
@@ -97,50 +86,23 @@ const DateTimeSelection = () => {
             <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Choose a Date</h2>
             
             <div className="mb-6">
-              <p className="text-right mb-2 text-gray-500">January</p>
-              <div className="overflow-x-auto">
-                <div className="min-w-full grid grid-cols-8 gap-1 md:gap-2 text-center text-sm md:text-base">
-                  {/* Header row */}
-                  <div className="p-1 md:p-2"></div>
-                  {daysOfWeek.map((day, index) => (
-                    <div key={`day-header-${index}`} className={`p-1 md:p-2 font-medium ${day === 'Sa' || day === 'Su' ? 'text-blue-500' : ''}`}>
-                      {day}
-                    </div>
-                  ))}
-                  
-                  {/* Calendar rows */}
-                  {calendar.map((week, weekIndex) => (
-                    <React.Fragment key={`week-${weekIndex}`}>
-                      {week.map((day, dayIndex) => {
-                        if (dayIndex === 0) {
-                          return (
-                            <div key={`week-number-${weekIndex}`} className="p-1 md:p-2 bg-green-500 text-white rounded-md flex items-center justify-center">
-                              {weekIndex + 1}
-                            </div>
-                          );
-                        }
-                        
-                        const isSelected = selectedDate && selectedDate.weekIndex === weekIndex && selectedDate.day === day;
-                        const isWeekend = dayIndex === 6 || dayIndex === 7;
-                        
-                        return (
-                          <div
-                            key={`day-${weekIndex}-${dayIndex}`}
-                            className={`p-1 md:p-2 cursor-pointer ${
-                              isSelected
-                                ? 'text-white bg-blue-500'
-                                : isWeekend
-                                ? 'text-blue-500'
-                                : ''
-                            }`}
-                            onClick={() => handleDateSelect(weekIndex, day)}
-                          >
-                            {day}
-                          </div>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
+              <div className="flex justify-center">
+                <div style={calendarStyles}>
+                  <DayPicker
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    disabled={disabledDays}
+                    month={month}
+                    onMonthChange={setMonth}
+                    showOutsideDays
+                    className="border rounded-lg p-4 bg-white shadow-sm"
+                    modifiersClassNames={{
+                      selected: 'bg-blue-500 text-white rounded-full',
+                      today: 'border border-blue-500 rounded-full',
+                      disabled: 'text-gray-300 cursor-not-allowed'
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -150,60 +112,83 @@ const DateTimeSelection = () => {
           <div className="mb-8 lg:mb-10">
             <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">Choose a Time Slot</h2>
             
-            {/* Morning Slots */}
-            <div className="mb-6">
-              <h3 className="text-lg md:text-xl font-medium text-yellow-500 mb-3 md:mb-4">Morning</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-                {morningSlots.map((slot, index) => (
-                  <button
-                    key={`morning-${index}`}
-                    className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base ${
-                      selectedTime === slot.time ? 'border-green-500 text-green-500' : ''
-                    }`}
-                    onClick={() => handleTimeSelect(slot.time)}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
+            {selectedDate ? (
+              <>
+                {/* Morning Slots */}
+                <div className="mb-6">
+                  <h3 className="text-lg md:text-xl font-medium text-yellow-500 mb-3 md:mb-4">Morning</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
+                    {morningSlots.map((slot, index) => (
+                      <button
+                        key={`morning-${index}`}
+                        className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base transition-colors ${
+                          selectedTime === slot.time 
+                            ? 'border-green-500 bg-green-50 text-green-700' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleTimeSelect(slot.time)}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Afternoon Slots */}
+                <div className="mb-6">
+                  <h3 className="text-lg md:text-xl font-medium text-orange-500 mb-3 md:mb-4">Afternoon</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
+                    {afternoonSlots.map((slot, index) => (
+                      <button
+                        key={`afternoon-${index}`}
+                        className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base transition-colors ${
+                          selectedTime === slot.time 
+                            ? 'border-green-500 bg-green-50 text-green-700' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleTimeSelect(slot.time)}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Evening Slots */}
+                <div className="mb-6">
+                  <h3 className="text-lg md:text-xl font-medium text-blue-500 mb-3 md:mb-4">Evening</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
+                    {eveningSlots.map((slot, index) => (
+                      <button
+                        key={`evening-${index}`}
+                        className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base transition-colors ${
+                          selectedTime === slot.time 
+                            ? 'border-green-500 bg-green-50 text-green-700' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => handleTimeSelect(slot.time)}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-blue-600">Please select a date first</p>
               </div>
-            </div>
-            
-            {/* Afternoon Slots */}
-            <div className="mb-6">
-              <h3 className="text-lg md:text-xl font-medium text-orange-500 mb-3 md:mb-4">Afternoon</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-                {afternoonSlots.map((slot, index) => (
-                  <button
-                    key={`afternoon-${index}`}
-                    className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base ${
-                      selectedTime === slot.time ? 'border-green-500 text-green-500' : ''
-                    }`}
-                    onClick={() => handleTimeSelect(slot.time)}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Evening Slots */}
-            <div className="mb-6">
-              <h3 className="text-lg md:text-xl font-medium text-blue-500 mb-3 md:mb-4">Evening</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-                {eveningSlots.map((slot, index) => (
-                  <button
-                    key={`evening-${index}`}
-                    className={`py-2 md:py-3 px-2 md:px-4 border rounded-md text-center text-sm md:text-base ${
-                      selectedTime === slot.time ? 'border-green-500 text-green-500' : ''
-                    }`}
-                    onClick={() => handleTimeSelect(slot.time)}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
+          
+          {/* Selected date and time display */}
+          {selectedDate && selectedTime && (
+            <div className="mb-8 p-4 bg-green-50 border border-green-100 rounded-lg">
+              <p className="text-green-700 font-medium">
+                You selected: {formatSelectedDate(selectedDate)} at {selectedTime}
+              </p>
+            </div>
+          )}
           
           {/* Next button */}
           <div className="flex justify-center md:justify-end">
