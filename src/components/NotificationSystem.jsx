@@ -31,7 +31,7 @@
     // Determine recipient ID based on role
     const getRecipient = () => {
       if(userRole === "admin") return 'admin'
-      if (userRole === 'staff_manager') return 'staff-manager';
+      if (userRole === 'staff_manager') return `staff-manager - ${userId}`;
       if (userRole === 'staff') return `${userId}`;
       if (userRole === 'agent') return userId;
       return null;

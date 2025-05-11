@@ -25,7 +25,7 @@ const [currentUser,setCurrentUser]=useState({
     const handleCheckUser =()=>{
       setCurrentUser({
         name:session?.user?.name,
-        id:session?.user?.id,
+        id:session?.user?.city,
         role:session?.user?.role
       })
     }

@@ -27,7 +27,7 @@ const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
       setCurrentUser({
         name:session.user.name,
         id:session.user._id,
-        role:session.user.role
+        role:session.role
       })
     }
     handleCheckUser()
