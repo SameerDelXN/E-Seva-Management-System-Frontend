@@ -7,6 +7,7 @@ const ServiceModal = ({
   isOpen, 
   onClose, 
   service, 
+  
   onSave,
   isEdit,
   showUpdateSection,
@@ -263,6 +264,9 @@ const ServiceModal = ({
         setTimeout(() => {
           setSaveSuccess(false);
         }, 3000);
+        setTimeout(() => {
+          onClose(); // This will close the modal
+        }, 1500);
       } else {
         console.error('❌ Failed to update:', data.message);
         // Optionally: show error message to user

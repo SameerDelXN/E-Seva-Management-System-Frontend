@@ -81,7 +81,7 @@ const [currentUser,setCurrentUser]=useState({
           {isProfileMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
               <div className="py-2">
-                <button 
+                {/* <button 
                   onClick={() => {
                     router.push('/staff-manager/profile');
                     setIsProfileMenuOpen(false);
@@ -89,7 +89,7 @@ const [currentUser,setCurrentUser]=useState({
                   className="w-full flex items-center px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                 >
                   <User className="mr-2" size={16} /> Your Profile
-                </button>
+                </button> */}
                 <button 
                   onClick={() => {
                     handleSignOut();

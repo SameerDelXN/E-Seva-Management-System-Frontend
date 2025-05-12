@@ -900,7 +900,7 @@ const handleCloseModal = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700">Email Address*</label>
                     <div className="mt-1 relative rounded-md shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FiMail className="text-gray-400" />
@@ -917,7 +917,7 @@ const handleCloseModal = () => {
                     {
                       selectedService.formData.map((data)=>{
                         return<div key={data.label}>
-                          <label className="block text-sm font-medium text-gray-700">{data.label}</label>
+                          <label className="block text-sm font-medium text-gray-700">{data.label}*</label>
                           <div className="mt-1 relative rounded-md shadow-sm">
                           
                           {/* <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

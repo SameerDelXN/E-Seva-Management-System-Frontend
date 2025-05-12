@@ -32,29 +32,7 @@ const [selectedStaffServices, setSelectedStaffServices] = useState([]);
   const [staffToDelete, setStaffToDelete] = useState(null);
 
   // Initial data - in a real app, this would come from an API
-  const initialStaffs = [
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      username: 'rajesh_k',
-      password: 'password123',
-      contactNo: '9876543210',
-      registrationDate: '2023-01-15',
-      location: 'Pune',
-      ServiceGroup: 'E-Seva Kendra, RTO Services'
-    },
-    {
-      id: 2,
-      name: 'Priya Sharma',
-      username: 'priya_s',
-      password: 'password123',
-      contactNo: '8765432109',
-      registrationDate: '2023-02-20',
-      location: 'Mumbai',
-      ServiceGroup: 'CA Services, Legal Services'
-    },
-    // ... more initial staff data
-  ];
+
   const fetchStaffs = async () => {
     try {
         const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff", {
@@ -114,42 +92,7 @@ const ServicesModal = ({ services, onClose }) => {
   );
 };
   // Form validation schema
-  const validationSchema = Yup.object().shape({
-    name: Yup.string()
-      .required('Full name is required')
-      .min(3, 'Minimum 3 characters'),
-    username: Yup.string()
-      .required('Username is required')
-      .min(4, 'Minimum 4 characters')
-      .test('unique-username', 'Username already exists', function(value) {
-        if (!value) return true;
-        // Check if username exists in current staff list
-        const isDuplicate = staffs.some(staff => 
-          staff.username.toLowerCase() === value.toLowerCase() && 
-          (!editingStaff || staff._id !== editingStaff._id)
-        );
-        return !isDuplicate;
-      }),
-    password: Yup.string()
-      .required('Password is required')
-      .min(8, 'Minimum 8 characters'),
-    contactNo: Yup.string()
-      .required('Phone number is required')
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits')
-      .test('unique-phone', 'Phone number already exists', function(value) {
-        if (!value) return true;
-        // Check if phone exists in current staff list
-        const isDuplicate = staffs.some(staff => 
-          staff.contactNo === value && 
-          (!editingStaff || staff._id !== editingStaff._id)
-        );
-        return !isDuplicate;
-      }),
-    location: Yup.string()
-      .required('City is required'),
-    ServiceGroup: Yup.string()
-      .required('Services are required'),
-  });
+ 
 
   // Custom error message component
   const ErrorMessage = ({ children }) => (
@@ -177,84 +120,7 @@ const ServicesModal = ({ services, onClose }) => {
   }, []);
 
   // Handle form submission
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-    try {
-      // Check for duplicates in the current staff list
-      const usernameExists = staffs.some(staff => 
-        staff.username.toLowerCase() === values.username.toLowerCase() && 
-        (!editingStaff || staff._id !== editingStaff._id)
-      );
-
-      if (usernameExists) {
-        alert('Username already exists. Please choose a different username.');
-        setSubmitting(false);
-        return;
-      }
-
-      const phoneExists = staffs.some(staff => 
-        staff.contactNo === values.contactNo && 
-        (!editingStaff || staff._id !== editingStaff._id)
-      );
-
-      if (phoneExists) {
-        alert('Phone number already exists. Please use a different phone number.');
-        setSubmitting(false);
-        return;
-      }
-
-      console.log(values);
-
-      let url, method;
-
-      if (editingStaff) {
-        // Update existing staff
-        url = `https://dokument-guru-backend.vercel.app/api/admin/staff/update-staff/${editingStaff._id}`;
-        method = 'PUT';
-      } else {
-        // Add new staff
-        url = 'https://dokument-guru-backend.vercel.app/api/admin/staff/add-staff';
-        method = 'POST';
-      }
  
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        console.log("API Response:", data);
-        
-        // Show appropriate success popup
-        if (editingStaff) {
-          setShowUpdateSuccess(true);
-        } else {
-          setShowAddSuccess(true);
-        }
-        
-        // Refresh the staff list after successful operation
-        const updatedStaffs = await fetchStaffs();
-        setStaffs(updatedStaffs);
-        
-        // Reset form and UI state
-        resetForm();
-        setEditingStaff(null);
-        setShowAddForm(false);
-      } else {
-        console.error("API Error:", data);
-        alert(`Failed to ${editingStaff ? 'update' : 'register'} staff. Please try again.`);
-      }
-    } catch (error) {
-      console.error('Error saving staff:', error);
-      alert('An error occurred while saving staff. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
 
   
@@ -309,6 +175,28 @@ const ServicesModal = ({ services, onClose }) => {
     staff.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
     staff.ServiceGroup.toLowerCase().includes(searchTerm.toLowerCase())
   );
+const[serviceGroups,setServiceGroups]=useState([]);
+  const fetchServiceGroups = async () => {
+    try {
+      const res = await fetch("https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/fetch-group-names");
+      const data = await res.json();
+
+      if (res.ok) {
+        
+        console.log("✅ Service Groups:", data.serviceGroups);
+        setServiceGroups(data.serviceGroups);
+      } else {
+        console.error("❌ Failed to fetch service groups:", data.message || data);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching service groups:", err);
+    }
+  };
+ useEffect(() => {
+  fetchServiceGroups();
+  }, []);
+
+  
   const calculateServiceCounts = (staffData) => {
     const serviceCounts = {
       'E-Seva Kendra': 0,
@@ -818,39 +706,48 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
       {/* Service Cards */}
       {!showAddForm && (
        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-       {[
-    { icon: <FiHome />, name: 'E-Seva Kendra', color: 'green' },
-    { icon: <FiTruck />, name: 'RTO Services', color: 'blue' },
-    { icon: <FiDollarSign />, name: 'CA Services', color: 'yellow' },
-    { icon: <FiBook />, name: 'Legal Services', color: 'red' },
-    { icon: <FiEdit />, name: 'Online Form Filling', color: 'purple' },
-    { icon: <FiHome />, name: 'Maha E-Seva Kendra', color: 'green' },
-    { icon: <FiFileText />, name: 'DocumentGuru Membership', color: 'blue' },
-    { icon: <FiCreditCard />, name: 'Banking Services', color: 'yellow' },
-    { icon: <FiZap />, name: 'Quick Services', color: 'red' },
-    { icon: <FiGlobe />, name: 'ABHIMEX', color: 'purple' },
-  ].map((service, index) => {
-    const count = serviceCounts[service.name] || 0;
+  
+  {serviceGroups.map((service, index) => (
+  <div 
+    key={index} 
+    className="relative bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 group"
+  >
+    {/* Notification Badge - You can uncomment if needed */}
+    {/* {service.notification && (
+      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+        {service.notification}
+      </span>
+    )} */}
     
-    return (
-      <div key={index} className="relative bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-        {/* Notification Badge */}
-        {count > 0 && (
-          <span className="absolute top-2 right-2 bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-            {count}
-          </span>
+    <div className="flex items-center space-x-4">
+      {/* Icon/Image Container */}
+      <div className={`p-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 flex-shrink-0 group-hover:from-blue-100 group-hover:to-blue-200 transition-colors`}>
+        {service.image ? (
+          <img 
+            src={service.image} 
+            alt={service.name} 
+            className="h-10 w-10 object-contain rounded-sm"
+          />
+        ) : (
+          <div className="h-10 w-10 flex items-center justify-center">
+            <FiFile className="w-6 h-6" />
+          </div>
         )}
-        <div className="flex items-center">
-          <div className={`p-3 rounded-lg bg-${service.color}-100 text-${service.color}-600 mr-4`}>
-            {service.icon}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">{service.name}</p>
-          </div>
-        </div>
       </div>
-    );
-  })}
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <span className="text-lg font-semibold capitalize text-gray-800 truncate">
+          {service.name}
+        </span>
+        
+      </div>
+    </div>
+    
+   
+   
+  </div>
+))}
      </div>
      
       )}

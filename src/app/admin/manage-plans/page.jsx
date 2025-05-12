@@ -382,7 +382,7 @@ export default function App() {
         }
         await fetchAndSetPlans();
         const updatedPlan = await response.json();
-        
+    
         // Update local state
         setPlans(prevPlans => prevPlans.map(plan => 
           plan._id === currentPlan._id ? updatedPlan : plan
@@ -417,9 +417,9 @@ export default function App() {
         }
 
         const createdPlan = await response.json();
-        
+        console.log("updated plan with new addition",createdPlan);
         // Update both plans and filteredPlans state by adding the new plan at the end
-        setPlans(prevPlans => [...prevPlans, createdPlan]);
+        setPlans(prevPlans => [...prevPlans, createdPlan.plan]);
         setFilteredPlans(prevPlans => [...prevPlans, createdPlan]);
 
         setShowAddSuccess(true);
