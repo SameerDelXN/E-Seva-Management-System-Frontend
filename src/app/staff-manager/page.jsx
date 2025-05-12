@@ -49,7 +49,7 @@ export default function StaffManagerDashboard() {
     const [currentRemark, setCurrentRemark] = useState("");
     const [selectedApplicationId, setSelectedApplicationId] = useState(null);
 
-  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
+  const API_BASE_URL = " https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
   // Stats counters for dashboard
@@ -72,6 +72,7 @@ export default function StaffManagerDashboard() {
       
       const data = await response.json();
       setApplications(data);
+     
       
       // Calculate stats
       const unassignedApps = data.filter(app => !app.staff || app.staff === "Not Assigned").length;
@@ -174,7 +175,7 @@ console.log("appi",applications)
           name: newStatus,
           hexcode: statusDetails.hexcode,
           askreason: statusDetails.askreason,
-          reason: reason,
+          reason: statusDetails.askreason ? reason : "",
           updatedAt: new Date()
         }]
       };
@@ -393,6 +394,12 @@ console.log("appi",applications)
   };
 
   const saveStatus = (id) => {
+    const statusDetails = combinedStatusOptions.find(option => option.name === editingStatus);
+  
+  if (statusDetails?.askreason && !statusReason.trim()) {
+    alert("Please provide a reason for this status change");
+    return;
+  }
     updateStatus(id, editingStatus, statusReason);
   };
 
@@ -705,7 +712,9 @@ console.log("appi",applications)
                                 <div className="flex items-center space-x-2">
                                   <StatusBadge 
                                     status={getCurrentStatus(application)} 
-                                    hexcode={application.initialStatus?.[0]?.hexcode} 
+                                    hexcode={application.initialStatus?.[0]?.hexcode}
+                                    reason={application.initialStatus?.[0]?.reason}
+ 
                                   />
                                   <button 
                                     onClick={() => startEditStatus(application)}
@@ -835,7 +844,7 @@ console.log("appi",applications)
           </div>
         )}
 
-       {isStatusHistoryModalOpen && selectedApplication && (
+       {/* {isStatusHistoryModalOpen && selectedApplication && (
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -874,7 +883,56 @@ console.log("appi",applications)
               </div>
             </div>
           </div>
+        )} */}
+
+{isStatusHistoryModalOpen && selectedApplication && (
+  <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 className="text-lg font-medium text-gray-900 mb-4">
+        Status History
+      </h3>
+      
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {selectedApplication.statusHistory && selectedApplication.statusHistory.length > 0 ? (
+          [...selectedApplication.statusHistory].reverse().map((status, idx) => (
+            <div key={idx} className="border-l-4 pl-3 py-2" style={{borderColor: status.hexcode || '#CBD5E0'}}>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-900">{status.name}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(status.updatedAt).toLocaleString()}
+                </span>
+              </div>
+              {status.reason && (
+                <div className="mt-2">
+                  <button 
+                    onClick={() => alert(`Reason: ${status.reason}`)}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                  >
+                    <FiMessageSquare className="mr-1 h-3 w-3" />
+                    View Reason
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No status history available
+          </div>
         )}
+      </div>
+      
+      <div className="mt-6 flex justify-end">
+        <button
+          onClick={() => setIsStatusHistoryModalOpen(false)}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Add Remark Modal */}
         {isRemarkModalOpen && selectedApplication && (
@@ -1022,6 +1080,7 @@ console.log("appi",applications)
                                  <StatusBadge 
                                    status={getCurrentStatus(selectedApplication)} 
                                    hexcode={selectedApplication.initialStatus?.[0]?.hexcode} 
+                                   reason={selectedApplication.initialStatus?.[0]?.reason}
                                  />
                                </div>
                              </div>
@@ -1205,8 +1264,36 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // StatusBadge Component
-function StatusBadge({ status, hexcode }) {
-  // Default color based on status names, fallback to hexcode if provided
+// function StatusBadge({ status, hexcode }) {
+//   // Default color based on status names, fallback to hexcode if provided
+//   const getDefaultColor = (status) => {
+//     switch(status.toLowerCase()) {
+//       case 'completed': return '#10B981'; // green
+//       case 'in progress': return '#F59E0B'; // yellow
+//       case 'initiated': return '#6366F1'; // indigo
+//       case 'on hold': return '#EF4444'; // red
+//       case 'rejected': return '#EF4444'; // red
+//       case 'cancelled': return '#6B7280'; // gray
+//       default: return '#6366F1'; // indigo as default
+//     }
+//   };
+  
+//   const bgColor = hexcode || getDefaultColor(status);
+  
+//   return (
+//     <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+//       style={{ 
+//         backgroundColor: `${bgColor}20`, // 20% opacity of the color
+//         color: bgColor 
+//       }}>
+//       {status}
+//     </span>
+//   );
+// }
+
+function StatusBadge({ status, hexcode, reason }) {
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  
   const getDefaultColor = (status) => {
     switch(status.toLowerCase()) {
       case 'completed': return '#10B981'; // green
@@ -1222,12 +1309,76 @@ function StatusBadge({ status, hexcode }) {
   const bgColor = hexcode || getDefaultColor(status);
   
   return (
-    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-      style={{ 
-        backgroundColor: `${bgColor}20`, // 20% opacity of the color
-        color: bgColor 
-      }}>
-      {status}
-    </span>
+    <>
+      <div className="flex items-center">
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+          style={{ 
+            backgroundColor: `${bgColor}20`, // 20% opacity of the color
+            color: bgColor 
+          }}>
+          {status}
+        </span>
+        {reason && (
+          <button 
+            className="ml-1 text-gray-500 hover:text-gray-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowReasonModal(true);
+            }}
+            title="View reason"
+          >
+            <FiMessageSquare className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Reason Modal */}
+      {showReasonModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 transition-opacity" 
+              aria-hidden="true"
+              onClick={() => setShowReasonModal(false)}
+            >
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            {/* Modal container */}
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <FiMessageSquare className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg capitalize leading-6 font-medium text-gray-900">
+                      Status : {status}
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm capitalize text-gray-500">
+                       Reason : {reason}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setShowReasonModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
