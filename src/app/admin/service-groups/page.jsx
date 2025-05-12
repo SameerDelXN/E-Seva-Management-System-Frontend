@@ -1386,6 +1386,8 @@ const ServiceManagementModal = ({
     image: groupData?.image || '',
     services: groupData?.services || []
   });
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [newService, setNewService] = useState({ name: '', documentNames: [''] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -1402,9 +1404,49 @@ const ServiceManagementModal = ({
         image: groupData.image,
         services: groupData.services
       });
+      setPreviewUrl(groupData.image);
     }
   }, [groupData]);
 
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Create preview URL
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
+
+    // Start loading
+    setIsImageUploading(true);
+    setError(null);
+
+    // Upload file to backend
+    const fileData = new FormData();
+    fileData.append('file', file);
+    fileData.append('type', 'serviceImage');
+
+    try {
+      const response = await axios.post('/api/upload', fileData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      // Update formData with the returned URL
+      setFormData(prev => ({
+        ...prev,
+        image: response.data.url
+      }));
+      
+    } catch (error) {
+      console.error('Upload failed:', error.response?.data || error.message);
+      setError('Failed to upload image');
+      setPreviewUrl(formData.image); // Revert to previous image
+    } finally {
+      setIsImageUploading(false);
+    }
+  };
+
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -1588,14 +1630,29 @@ const ServiceManagementModal = ({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                <input
-                  type="url"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleInputChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Image* {isImageUploading && "(Uploading...)"}
+                </label>
+                {isImageUploading ? (
+                  <div className="h-32 w-full flex items-center justify-center bg-gray-100 rounded-md border border-gray-200">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Uploading...</span>
+                  </div>
+                ) : previewUrl ? (
+                  <div className="mb-2">
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="h-32 w-full object-cover rounded-md border border-gray-200"
+                    />
+                  </div>
+                ) : null}
+               <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
                   className={`w-full px-3 py-2 border ${validationErrors.image ? 'border-red-500' : 'border-gray-300'} rounded-md`}
-                  required
+                  disabled={isImageUploading}
                 />
                 {validationErrors.image && (
                   <p className="mt-1 text-sm text-red-600">{validationErrors.image}</p>
