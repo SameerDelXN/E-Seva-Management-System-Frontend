@@ -50,7 +50,7 @@ export default function Dashboard() {
     staff: "",
     amount: ""
   });
-
+const [formDate,setFomatDate]=useState("Loading")
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
 
   // Fetch all applications
@@ -87,6 +87,20 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+
+  function formatDate(dateString) {
+    if (!dateString) return "N/A";
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' }).toUpperCase();
+    const year = date.getFullYear();
+    
+    return `${day} ${month} ${year}`;
+  }
   const updateStatus = async (id, newStatus, reason = "") => {
     try {
       const statusDetails = combinedStatusOptions.find(option => option.name === newStatus);
@@ -770,7 +784,8 @@ const addDocumentRemark = async () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application?.provider[0]?.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">  {formatDate(application.date)}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
                           <td className="px-6 py-4 whitespace-nowrap"> {editingStatusId === application._id ? (
                                                          <div className="flex flex-col space-y-2">

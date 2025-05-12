@@ -65,7 +65,7 @@ const StaffManagement = () => {
   const fetchLocations = async () => {
     try {
       setIsLoadingLocations(true);
-      const response = await fetch("http://localhost:3001/api/admin/location/fetch-all", {
+      const response = await fetch("https://dokument-guru-backend.vercel.app/api/admin/location/fetch-all", {
         method: 'GET'
       });
 

@@ -374,7 +374,7 @@ const AgentManagement = () => {
       { id: 'personal', label: 'Personal Info', icon: <FiUser /> },
       { id: 'shop', label: 'Shop Details', icon: <FiPackage /> },
       { id: 'account', label: 'Account', icon: <FiSettings /> },
-      { id: 'financial', label: 'Financial', icon: <FiDollarSign /> },
+      // { id: 'financial', label: 'Financial', icon: <FiDollarSign /> },
       { id: 'documents', label: 'Documents', icon: <FiFile /> },
     ];
   
