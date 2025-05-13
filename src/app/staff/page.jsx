@@ -811,7 +811,7 @@ export default function StaffDashboard() {
                           <StatusBadge
                             status={getCurrentStatus(selectedApplication)}
                             hexcode={selectedApplication.initialStatus?.[0]?.hexcode}
-                            reason={application.initialStatus?.[0]?.reason}
+                            reason={selectedApplication.initialStatus?.[0]?.reason ? selectedApplication.initialStatus?.[0]?.reason : null}
                           />
                         </div>
                       </div>

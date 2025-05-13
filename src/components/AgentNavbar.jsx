@@ -1,9 +1,10 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { 
-  User, 
-  LogOut, 
+import {
+  User,
+  LogOut,
   X,
+  Wallet,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSession } from '@/context/SessionContext';
@@ -13,6 +14,7 @@ import NotificationSystem from './NotificationSystem';
 
 const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [walletAmount, setWalletAmount] = useState(0);
   const { session, signOut } = useSession();
   
   console.log("sessss = ",session)
@@ -32,6 +34,26 @@ const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
     }
     handleCheckUser()
   },[session])
+  
+  // Fetch wallet amount
+  useEffect(() => {
+    const fetchWalletAmount = async () => {
+      if (session?.user?._id) {
+        try {
+          const response = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/wallet/${session.user._id}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            setWalletAmount(data.wallet);
+          }
+        } catch (error) {
+          console.error("Error fetching wallet amount:", error);
+        }
+      }
+    };
+    
+    fetchWalletAmount();
+  }, [session?.user?._id]);
   const handleSignOut = async () => {
     await signOut();
     router.push('/auth/signin');
@@ -57,11 +79,19 @@ const AgentNavbar = ({ toggleMobileSidebar, isMobileSidebarOpen }) => {
 
       {/* Right Side Actions */}
       <div className="flex items-center space-x-4">
+        {/* Wallet */}
+        <div className="flex items-center bg-gradient-to-r from-indigo-500 to-blue-600 text-white px-3 py-1.5 rounded-lg shadow-md">
+          <Wallet size={18} className="mr-2" />
+          <span className="font-medium text-sm">
+            Rs.{walletAmount.toFixed(2)}
+          </span>
+        </div>
+        
         {/* Profile */}
         <div className="flex items-center">
-                      {/* Notification Component */}
-                      <NotificationSystem userRole={currentUser.role} userId={currentUser.id} />
-                    </div>
+          {/* Notification Component */}
+          <NotificationSystem userRole={currentUser.role} userId={currentUser.id} />
+        </div>
         <div className="relative">
           <button 
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
