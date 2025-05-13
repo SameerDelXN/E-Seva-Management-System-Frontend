@@ -127,7 +127,11 @@ const AgentManagement = () => {
   const [sortBy, setSortBy] = useState('Newest First'); // Set default value
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [showChangePlanModal, setShowChangePlanModal] = useState(false);
-  const [currentAgent, setCurrentAgent] = useState(null);
+  const [currentAgent, setCurrentAgent] = useState({
+    agentId:"",
+    agentName:"",
+    currentBalance:""
+  });
   const [lastRecharge, setlastRecharge] = useState('');
 
 
@@ -1080,8 +1084,12 @@ const AgentManagement = () => {
     setShowViewEditModal(true);
   };
 
-  const handleOpenRecharge = (agent) => {
-    setCurrentAgent(agent);
+  const handleOpenRecharge = (agentId,agentName,balance) => {
+    setCurrentAgent({
+      agentId:agentId,
+      agentName:agentName,
+      currentBalance:balance
+    });
     setlastRecharge('');
     setShowRechargeModal(true);
   };
@@ -1113,6 +1121,7 @@ const AgentManagement = () => {
     setShowChangePlanModal(true);
   };
   // Recharge Modal
+  console.log("CA = ",currentAgent)
   const RechargeModal = ( { onRechargeSuccess }) => {
     console.log(currentAgent._id)
     const [rechargeAmount, setRechargeAmount] = useState('');
@@ -1136,7 +1145,8 @@ const AgentManagement = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            agentId: currentAgent?._id,
+            agentId: currentAgent.agentId,
+            agentName : currentAgent.agentName,
             amount: rechargeAmount
           }),
         });
@@ -1166,10 +1176,10 @@ const AgentManagement = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recharge Agent Account</h3>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Agent: <span className="font-semibold">{currentAgent?.name}</span>
+              Agent: <span className="font-semibold">{currentAgent?.agentName}</span>
             </label>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Current Balance: <span className="font-semibold">₹{currentAgent?.balance}</span>
+              Current Balance: <span className="font-semibold">₹{currentAgent?.currentBalance}</span>
             </label>
           </div>
   
@@ -2661,7 +2671,7 @@ const AgentManagement = () => {
                           <span>Edit / View</span>
                         </button>
                         <button
-                          onClick={() => handleOpenRecharge(agent)}
+                          onClick={() => handleOpenRecharge(agent._id,agent.fullName,agent.wallet)}
                           className="text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-50"
                           title="Recharge"
                         >
