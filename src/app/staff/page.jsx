@@ -6,7 +6,7 @@ import { FiRefreshCw, FiUpload, FiFile, FiList, FiCheckCircle, FiClock, FiUserCh
 import { useSession } from '@/context/SessionContext';
 
 export default function StaffDashboard() {
-  const {session} = useSession();
+  const { session } = useSession();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +18,8 @@ export default function StaffDashboard() {
   const [statusReason, setStatusReason] = useState("");
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [editingStatus, setEditingStatus] = useState("");
-  
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [currentReason, setCurrentReason] = useState("");
   // Add states for remark functionality
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [currentRemark, setCurrentRemark] = useState("");
@@ -34,7 +35,7 @@ export default function StaffDashboard() {
 
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const globalStatusOptions = [];
-  
+
   // Stats counters for dashboard
   const [stats, setStats] = useState({
     total: 0,
@@ -47,27 +48,27 @@ export default function StaffDashboard() {
     try {
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/read`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch applications: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Filter applications assigned to current staff
       const filteredApplications = data.filter(app => app.staff[0].id === session?.user?._id);
       setApplications(filteredApplications);
-      
+
       // Calculate stats
       const pendingApps = filteredApplications.filter(app => app.status !== "Completed").length;
       const completedApps = filteredApplications.filter(app => app.status === "Completed").length;
-      
+
       setStats({
         total: filteredApplications.length,
         pending: pendingApps,
         completed: completedApps
       });
-      
+
     } catch (err) {
       console.error("Error fetching applications:", err);
       setError("Failed to load applications");
@@ -83,13 +84,13 @@ export default function StaffDashboard() {
       if (!statusDetails) {
         throw new Error("Invalid status selected");
       }
-      
+
       // Find current application to add to history
       const currentApp = applications.find(app => app._id === id);
       if (!currentApp) {
         throw new Error("Application not found");
       }
-      
+
       // Prepare current status for history
       const currentStatusEntry = {
         name: currentApp.initialStatus?.[0]?.name || currentApp.status || "Initiated",
@@ -98,7 +99,7 @@ export default function StaffDashboard() {
         updatedAt: new Date(),
         updatedBy: "Admin" // Should be replaced with actual logged-in user
       };
-      
+
       // Create new status object
       const newCurrentStatus = {
         name: newStatus,
@@ -107,7 +108,7 @@ export default function StaffDashboard() {
         reason: reason,
         updatedAt: new Date()
       };
-      
+
       // Prepare update payload
       const updatePayload = {
         ...currentApp,
@@ -119,7 +120,7 @@ export default function StaffDashboard() {
           updatedAt: new Date()
         }]
       };
-      
+
       const response = await fetch(`${API_BASE_URL}/update/${id}`, {
         method: 'PUT',
         headers: {
@@ -127,11 +128,11 @@ export default function StaffDashboard() {
         },
         body: JSON.stringify(updatePayload),
       });
-      
+
       const updatedApplication = await response.json();
-      
+
       // Update local state
-      setApplications(applications.map(app => 
+      setApplications(applications.map(app =>
         app._id === id ? updatedApplication : app
       ));
       fetchApplications();
@@ -141,7 +142,7 @@ export default function StaffDashboard() {
       setStatusReason("");
       setShowReasonField(false);
       setCombinedStatusOptions([]);
-      
+
     } catch (err) {
       console.error("Error updating status:", err);
       alert("Failed to update status. Please try again.");
@@ -156,14 +157,14 @@ export default function StaffDashboard() {
       if (!currentApp) {
         throw new Error("Application not found");
       }
-      
+
       // Prepare update payload
       const updatePayload = {
         ...currentApp,
         remark: remark,
         remarkAuthorId: session?.user?._id
       };
-      
+
       const response = await fetch(`${API_BASE_URL}/update/${id}`, {
         method: 'PUT',
         headers: {
@@ -171,19 +172,19 @@ export default function StaffDashboard() {
         },
         body: JSON.stringify(updatePayload),
       });
-      
+
       const updatedApplication = await response.json();
-      
+
       // Update local state
-      setApplications(applications.map(app => 
+      setApplications(applications.map(app =>
         app._id === id ? updatedApplication : app
       ));
-      
+
       // Close modal and reset states
       setShowRemarkModal(false);
       setCurrentRemark("");
       setSelectedApplicationId(null);
-      
+
     } catch (err) {
       console.error("Error updating remark:", err);
       alert("Failed to update remark. Please try again.");
@@ -193,13 +194,13 @@ export default function StaffDashboard() {
   const handleFileChange = async (e, id, type) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     try {
       // In a real implementation, you would upload the file to your server
       // and get back a URL or file path
       const fileFieldName = type === 'document' ? 'document' : 'receipt';
       const fileData = { [fileFieldName]: file.name }; // In real app, this would be file URL
-      
+
       const response = await fetch(`${API_BASE_URL}/update`, {
         method: 'PUT',
         headers: {
@@ -207,22 +208,22 @@ export default function StaffDashboard() {
         },
         body: JSON.stringify({ _id: id, ...fileData }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to upload ${type}: ${response.status}`);
       }
-      
+
       const updatedApplication = await response.json();
-      setApplications(applications.map(app => 
+      setApplications(applications.map(app =>
         app._id === id ? updatedApplication : app
       ));
-      
+
       if (type === 'document') {
         setSelectedFile(file);
       } else {
         setSelectedReceipt(file);
       }
-      
+
     } catch (err) {
       console.error(`Error uploading ${type}:`, err);
       alert(`Failed to upload ${type}. Please try again.`);
@@ -233,14 +234,14 @@ export default function StaffDashboard() {
     if (!application.service || !application.service.status || !Array.isArray(application.service.status)) {
       return [];
     }
-    
+
     return application.service.status.map(status => ({
       name: status.name,
       hexcode: status.hexcode,
       askreason: status.askreason || false
     }));
   };
-  
+
   const getCurrentStatus = (application) => {
     // Always use currentStatus.name if available, otherwise fall back to status
     return application.initialStatus?.[0]?.name || application.status || "Initiated";
@@ -249,24 +250,24 @@ export default function StaffDashboard() {
   const startEditStatus = (application) => {
     // Always use currentStatus if available, otherwise fall back to status
     const currentStatusName = application.initialStatus?.[0]?.name || application.status || "Initiated";
-    
+
     // Get service-specific status options
     const serviceStatusOptions = getServiceStatusOptions(application);
-    
+
     // Combine global and service-specific status options
     // Avoid duplicates by checking names
     const allStatusOptions = [...globalStatusOptions];
-    
+
     serviceStatusOptions.forEach(serviceStatus => {
       if (!allStatusOptions.some(option => option.name === serviceStatus.name)) {
         allStatusOptions.push(serviceStatus);
       }
     });
-    
+
     setCombinedStatusOptions(allStatusOptions);
     setEditingStatusId(application._id);
     setEditingStatus(currentStatusName);
-    
+
     // Check if this status requires a reason
     const statusOption = allStatusOptions.find(option => option.name === currentStatusName);
     setShowReasonField(statusOption?.askreason || false);
@@ -277,14 +278,32 @@ export default function StaffDashboard() {
     setEditingStatus("");
   };
 
+  // const handleStatusChange = (e) => {
+  //   setEditingStatus(e.target.value);
+  // };
+
+  // const saveStatus = (id) => {
+  //   updateStatus(id, editingStatus);
+  // };
   const handleStatusChange = (e) => {
-    setEditingStatus(e.target.value);
+    const newStatus = e.target.value;
+    setEditingStatus(newStatus);
+
+    // Check if the new status requires a reason
+    const selectedOption = combinedStatusOptions.find(option => option.name === newStatus);
+    setShowReasonField(selectedOption?.askreason || false);
+
+    // Clear reason when switching to a status that doesn't require it
+    if (!selectedOption?.askreason) {
+      setStatusReason("");
+    }
   };
 
   const saveStatus = (id) => {
-    updateStatus(id, editingStatus);
+    // Only pass reason if the status requires it
+    const reason = showReasonField ? statusReason : "";
+    updateStatus(id, editingStatus, reason);
   };
-
   // Function to open the remark modal
   const openRemarkModal = (application) => {
     setSelectedApplicationId(application._id);
@@ -306,103 +325,103 @@ export default function StaffDashboard() {
 
   // Function to open document remark modal
   const openDocumentRemarkModal = (document, application) => {
-  // Find the document object from the application.document array
-  // This is where the issue was - we need to properly find the document
-  const docObj = application.document.find(doc => doc._id === document._id);
-  
-  setSelectedDocument({
-    _id: document._id,
-    name: document.name,
-    remark: docObj?.remark || ""
-  });
-  
-  // Set selected application for context
-  setSelectedApplication(application);
-  
-  // If there is a remark, add it to documentRemarks array
-  // This ensures we properly display existing remarks
-  if (docObj?.remark) {
-    setDocumentRemarks([docObj.remark]);
-  } else {
-    setDocumentRemarks([]);
-  }
-  
-  setShowDocumentRemarkModal(true);
-};
+    // Find the document object from the application.document array
+    // This is where the issue was - we need to properly find the document
+    const docObj = application.document.find(doc => doc._id === document._id);
 
-  // Function to add document remark
- // Function to add document remark - Fixed implementation
-const addDocumentRemark = async () => {
-  if (!newDocumentRemark.trim()) return;
-  
-  try {
-    // Find the current document in the application and update it with the new remark
-    const updatedDocuments = selectedApplication.document.map(doc => {
-      if (doc._id === selectedDocument._id) {
-        return { 
-          ...doc, 
-          remark: newDocumentRemark 
-        };
-      }
-      return doc;
-    });
-    
-    // Create new remark history entry
-    const newRemarkHistory = {
-      text: newDocumentRemark,
-      documentId: selectedDocument._id,
-      addedBy: session?.user?._id,
-      addedAt: new Date()
-    };
-
-    // Prepare the update payload
-    const updatePayload = {
-      ...selectedApplication,
-      document: updatedDocuments,
-      remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
-    };
-
-    const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatePayload),
+    setSelectedDocument({
+      _id: document._id,
+      name: document.name,
+      remark: docObj?.remark || ""
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to update remarks');
+    // Set selected application for context
+    setSelectedApplication(application);
+
+    // If there is a remark, add it to documentRemarks array
+    // This ensures we properly display existing remarks
+    if (docObj?.remark) {
+      setDocumentRemarks([docObj.remark]);
+    } else {
+      setDocumentRemarks([]);
     }
 
-    const updatedApplication = await response.json();
-    
-    // Update local state
-    setApplications(applications.map(app => 
-      app._id === selectedApplication._id ? updatedApplication : app
-    ));
+    setShowDocumentRemarkModal(true);
+  };
 
-    // Update the selected application state
-    setSelectedApplication(updatedApplication);
+  // Function to add document remark
+  // Function to add document remark - Fixed implementation
+  const addDocumentRemark = async () => {
+    if (!newDocumentRemark.trim()) return;
 
-    // Update document remarks in the modal
-    setDocumentRemarks([newDocumentRemark]);
-    
-    // Clear input field
-    setNewDocumentRemark("");
-    
-    // Show success message
-    alert('Remark added successfully');
-     setShowDocumentRemarkModal(false)
-    setShowViewModal(false)
+    try {
+      // Find the current document in the application and update it with the new remark
+      const updatedDocuments = selectedApplication.document.map(doc => {
+        if (doc._id === selectedDocument._id) {
+          return {
+            ...doc,
+            remark: newDocumentRemark
+          };
+        }
+        return doc;
+      });
 
-    fetchApplications()
-  } catch (err) {
-    console.error("Error adding document remark:", err);
-    alert("Failed to add remark. Please try again.");
-   
-  }
-};
-  console.log("docu = ",  documentRemarks)
+      // Create new remark history entry
+      const newRemarkHistory = {
+        text: newDocumentRemark,
+        documentId: selectedDocument._id,
+        addedBy: session?.user?._id,
+        addedAt: new Date()
+      };
+
+      // Prepare the update payload
+      const updatePayload = {
+        ...selectedApplication,
+        document: updatedDocuments,
+        remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
+      };
+
+      const response = await fetch(`${API_BASE_URL}/update/${selectedApplication._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatePayload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update remarks');
+      }
+
+      const updatedApplication = await response.json();
+
+      // Update local state
+      setApplications(applications.map(app =>
+        app._id === selectedApplication._id ? updatedApplication : app
+      ));
+
+      // Update the selected application state
+      setSelectedApplication(updatedApplication);
+
+      // Update document remarks in the modal
+      setDocumentRemarks([newDocumentRemark]);
+
+      // Clear input field
+      setNewDocumentRemark("");
+
+      // Show success message
+      alert('Remark added successfully');
+      setShowDocumentRemarkModal(false)
+      setShowViewModal(false)
+
+      fetchApplications()
+    } catch (err) {
+      console.error("Error adding document remark:", err);
+      alert("Failed to add remark. Please try again.");
+
+    }
+  };
+  console.log("docu = ", documentRemarks)
   // Load applications on component mount
   useEffect(() => {
     fetchApplications();
@@ -420,21 +439,21 @@ const addDocumentRemark = async () => {
       {/* Stats Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard 
-            title="My Applications" 
-            value={stats.total} 
+          <StatCard
+            title="My Applications"
+            value={stats.total}
             icon={<FiFile className="h-6 w-6 text-blue-500" />}
             color="bg-blue-100"
           />
-          <StatCard 
-            title="Pending Applications" 
-            value={stats.pending} 
+          <StatCard
+            title="Pending Applications"
+            value={stats.pending}
             icon={<FiClock className="h-6 w-6 text-yellow-500" />}
             color="bg-yellow-100"
           />
-          <StatCard 
-            title="Completed Applications" 
-            value={stats.completed} 
+          <StatCard
+            title="Completed Applications"
+            value={stats.completed}
             icon={<FiCheckCircle className="h-6 w-6 text-green-500" />}
             color="bg-green-100"
           />
@@ -446,7 +465,7 @@ const addDocumentRemark = async () => {
             <h2 className="text-xl font-semibold text-gray-900">My Applications</h2>
             <div className="flex items-center space-x-4">
               <span className="text-gray-600">Total: {applications.length}</span>
-              <button 
+              <button
                 onClick={fetchApplications}
                 className="flex items-center bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1 rounded"
               >
@@ -501,7 +520,7 @@ const addDocumentRemark = async () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          {/* <td className="px-6 py-4 whitespace-nowrap">
                             {editingStatusId === application._id ? (
                               <div className="flex flex-col space-y-2">
                                 <div className="flex items-center space-x-2">
@@ -561,10 +580,76 @@ const addDocumentRemark = async () => {
                                 )}
                               </div>
                             )}
+                          </td> */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {editingStatusId === application._id ? (
+                              <div className="flex flex-col space-y-2">
+                                <div className="flex items-center space-x-2">
+                                  <select
+                                    value={editingStatus}
+                                    onChange={handleStatusChange}
+                                    className="text-xs border border-gray-300 rounded p-1"
+                                  >
+                                    {combinedStatusOptions.map(option => (
+                                      <option key={option.name} value={option.name}>
+                                        {option.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    onClick={() => saveStatus(application._id)}
+                                    className="text-green-600 hover:text-green-900"
+                                  >
+                                    <FiSave className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={cancelEditStatus}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <FiX className="h-4 w-4" />
+                                  </button>
+                                </div>
+
+                                {showReasonField && (
+                                  <input
+                                    type="text"
+                                    placeholder="Enter reason"
+                                    value={statusReason}
+                                    onChange={(e) => setStatusReason(e.target.value)}
+                                    className="text-xs border border-gray-300 rounded p-1 w-full"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <StatusBadge
+                                  status={getCurrentStatus(application)}
+                                  hexcode={application.initialStatus?.[0]?.hexcode}
+                                  reason={application.initialStatus?.[0]?.reason}
+
+                                />
+                                <button
+                                  onClick={() => startEditStatus(application)}
+                                  className="text-indigo-600 hover:text-indigo-900"
+                                  title="Edit Status"
+                                >
+                                  <FiEdit className="h-4 w-4" />
+                                </button>
+                                {(application.statusHistory?.length > 0) && (
+                                  <button
+                                    onClick={() => handleViewStatusHistory(application)}
+                                    className="text-gray-600 hover:text-gray-900"
+                                    title="View Status History"
+                                  >
+                                    <FiList className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {typeof application.service === 'object' 
-                              ? application.service.name || JSON.stringify(application.service) 
+                            {typeof application.service === 'object'
+                              ? application.service.name || JSON.stringify(application.service)
                               : application.service}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{application.amount}</td>
@@ -574,10 +659,10 @@ const addDocumentRemark = async () => {
                                 <span className="text-sm text-gray-500">Uploaded</span>
                               </div>
                             ) : (
-                              <FileUpload 
-                                id={application._id} 
-                                type="document" 
-                                onChange={handleFileChange} 
+                              <FileUpload
+                                id={application._id}
+                                type="document"
+                                onChange={handleFileChange}
                                 file={application.document}
                                 status={application.status}
                               />
@@ -589,10 +674,10 @@ const addDocumentRemark = async () => {
                                 <span className="text-sm text-gray-500">Uploaded</span>
                               </div>
                             ) : (
-                              <FileUpload 
-                                id={application._id} 
-                                type="receipt" 
-                                onChange={handleFileChange} 
+                              <FileUpload
+                                id={application._id}
+                                type="receipt"
+                                onChange={handleFileChange}
                                 file={application.receipt}
                                 status={application.status}
                               />
@@ -603,7 +688,7 @@ const addDocumentRemark = async () => {
                               onClick={() => openViewModal(application)}
                               className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded"
                             >
-                              <FiEye className="h-3 w-3 mr-1" /> 
+                              <FiEye className="h-3 w-3 mr-1" />
                               VIEW DETAILS
                             </button>
                           </td>
@@ -693,7 +778,7 @@ const addDocumentRemark = async () => {
                         <FiX className="h-6 w-6" />
                       </button>
                     </div>
-                    
+
                     {/* Applicant Information */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
@@ -707,8 +792,8 @@ const addDocumentRemark = async () => {
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Service Type</h4>
                         <p className="mt-1 text-sm font-medium text-gray-900">
-                          {typeof selectedApplication.service === 'object' 
-                            ? selectedApplication.service.name 
+                          {typeof selectedApplication.service === 'object'
+                            ? selectedApplication.service.name
                             : selectedApplication.service}
                         </p>
                       </div>
@@ -723,15 +808,15 @@ const addDocumentRemark = async () => {
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Status</h4>
                         <div className="mt-1">
-                          <StatusBadge 
-                            status={getCurrentStatus(selectedApplication)} 
-                            hexcode={selectedApplication.initialStatus?.[0]?.hexcode} 
+                          <StatusBadge
+                            status={getCurrentStatus(selectedApplication)}
+                            hexcode={selectedApplication.initialStatus?.[0]?.hexcode}
                             reason={application.initialStatus?.[0]?.reason}
                           />
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Documents Section */}
                     <div className="mb-6">
                       <h4 className="text-lg font-medium text-gray-700 mb-3">Documents</h4>
@@ -749,7 +834,7 @@ const addDocumentRemark = async () => {
                                     onClick={() => openDocumentRemarkModal(doc, selectedApplication)}
                                     className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2 py-1 rounded flex items-center"
                                   >
-                                    <FiMessageSquare className="mr-1 h-3 w-3" /> 
+                                    <FiMessageSquare className="mr-1 h-3 w-3" />
                                     {doc.remark ? "View Remark" : "Add Remark"}
                                   </button>
                                   <button
@@ -766,7 +851,7 @@ const addDocumentRemark = async () => {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Remarks Section */}
                     <div className="mb-6">
                       <h4 className="text-lg font-medium text-gray-700 mb-3">Application Remarks</h4>
@@ -777,7 +862,7 @@ const addDocumentRemark = async () => {
                             <div className="mt-2 flex items-center text-xs text-gray-500">
                               <FiUserCheck className="mr-1" />
                               <span>
-                                Added by: {currentStaffName || "Staff"} 
+                                Added by: {currentStaffName || "Staff"}
                               </span>
                             </div>
                           </div>
@@ -810,51 +895,25 @@ const addDocumentRemark = async () => {
           </div>
         </div>
       )}
-
-      {/* Document Remark Modal */}
-   {showDocumentRemarkModal && selectedDocument && (
+      {/* Reason Modal */}
+{showReasonModal && (
   <div className="fixed inset-0 z-50 overflow-y-auto">
     <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
       <div className="fixed inset-0 transition-opacity" aria-hidden="true">
         <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
       </div>
-
       <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-      <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
         <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div className="sm:flex sm:items-start">
             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-              <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                {selectedDocument.name} - Document Remarks
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Status Change Reason
               </h3>
-              
-              {/* Existing remarks section - Fixed to properly display remarks */}
-              <div className="mt-4 max-h-40 overflow-y-auto">
-                {documentRemarks.length > 0 ? (
-                  documentRemarks.map((remark, index) => (
-                    <div key={index} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
-                      <p className="text-sm">{remark}</p>
-                     
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 italic">No remarks added for this document</p>
-                )}
-              </div>
-              
-              {/* Add new remark section */}
-              <div className="mt-4 w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Add New Remark
-                </label>
-                <textarea
-                  className="w-full h-24 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
-                  rows="3"
-                  placeholder="Enter document remark here..."
-                  value={newDocumentRemark}
-                  onChange={(e) => setNewDocumentRemark(e.target.value)}
-                ></textarea>
+              <div className="mt-4">
+                <p className="text-sm text-gray-500">
+                  {currentReason || "No reason provided"}
+                </p>
               </div>
             </div>
           </div>
@@ -862,23 +921,85 @@ const addDocumentRemark = async () => {
         <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
           <button
             type="button"
-            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-            onClick={addDocumentRemark}
-          >
-            Save Remark
-          </button>
-          <button
-            type="button"
             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-            onClick={() => setShowDocumentRemarkModal(false)}
+            onClick={() => setShowReasonModal(false)}
           >
-            Cancel
+            Close
           </button>
         </div>
       </div>
     </div>
   </div>
 )}
+
+      {/* Document Remark Modal */}
+      {showDocumentRemarkModal && selectedDocument && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                      {selectedDocument.name} - Document Remarks
+                    </h3>
+
+                    {/* Existing remarks section - Fixed to properly display remarks */}
+                    <div className="mt-4 max-h-40 overflow-y-auto">
+                      {documentRemarks.length > 0 ? (
+                        documentRemarks.map((remark, index) => (
+                          <div key={index} className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
+                            <p className="text-sm">{remark}</p>
+
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No remarks added for this document</p>
+                      )}
+                    </div>
+
+                    {/* Add new remark section */}
+                    <div className="mt-4 w-full">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Add New Remark
+                      </label>
+                      <textarea
+                        className="w-full h-24 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none focus:border-indigo-500"
+                        rows="3"
+                        placeholder="Enter document remark here..."
+                        value={newDocumentRemark}
+                        onChange={(e) => setNewDocumentRemark(e.target.value)}
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={addDocumentRemark}
+                >
+                  Save Remark
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setShowDocumentRemarkModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -907,41 +1028,135 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // StatusBadge Component
-function StatusBadge({ status, hexcode = "#A78BFA" }) {
-  // Map of status names to colors for fallback
-  const statusColors = {
-    "Initiated": "#A78BFA",
-    "In Process": "#3B82F6",
-    "Pending": "#F59E0B",
-    "Completed": "#10B981",
-    "Rejected": "#EF4444",
-    "On Hold": "#6B7280"
+// function StatusBadge({ status, hexcode = "#A78BFA" }) {
+//   // Map of status names to colors for fallback
+//   const statusColors = {
+//     "Initiated": "#A78BFA",
+//     "In Process": "#3B82F6",
+//     "Pending": "#F59E0B",
+//     "Completed": "#10B981",
+//     "Rejected": "#EF4444",
+//     "On Hold": "#6B7280"
+//   };
+
+//   // Use provided hexcode or fallback to predefined colors or default purple
+//   const bgColor = hexcode || statusColors[status] || "#A78BFA";
+
+//   // Compute text color based on background color brightness
+//   const isLight = (hexColor) => {
+//     // Remove # if present
+//     const hex = hexColor.replace('#', '');
+//     // Convert to RGB
+//     const r = parseInt(hex.substr(0, 2), 16);
+//     const g = parseInt(hex.substr(2, 2), 16);
+//     const b = parseInt(hex.substr(4, 2), 16);
+//     // Calculate brightness
+//     return (r * 0.299 + g * 0.587 + b * 0.114) > 150;
+//   };
+
+//   const textColor = isLight(bgColor) ? "text-gray-900" : "text-white";
+
+//   return (
+//     <span
+//       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${textColor}`}
+//       style={{ backgroundColor: bgColor }}
+//     >
+//       {status}
+//     </span>
+//   );
+// }
+
+
+
+function StatusBadge({ status, hexcode, reason }) {
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  
+  const getDefaultColor = (status) => {
+    switch(status.toLowerCase()) {
+      case 'completed': return '#10B981'; // green
+      case 'in progress': return '#F59E0B'; // yellow
+      case 'initiated': return '#6366F1'; // indigo
+      case 'on hold': return '#EF4444'; // red
+      case 'rejected': return '#EF4444'; // red
+      case 'cancelled': return '#6B7280'; // gray
+      default: return '#6366F1'; // indigo as default
+    }
   };
   
-  // Use provided hexcode or fallback to predefined colors or default purple
-  const bgColor = hexcode || statusColors[status] || "#A78BFA";
-  
-  // Compute text color based on background color brightness
-  const isLight = (hexColor) => {
-    // Remove # if present
-    const hex = hexColor.replace('#', '');
-    // Convert to RGB
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    // Calculate brightness
-    return (r * 0.299 + g * 0.587 + b * 0.114) > 150;
-  };
-  
-  const textColor = isLight(bgColor) ? "text-gray-900" : "text-white";
+  const bgColor = hexcode || getDefaultColor(status);
   
   return (
-    <span 
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${textColor}`}
-      style={{ backgroundColor: bgColor }}
-    >
-      {status}
-    </span>
+    <>
+      <div className="flex items-center">
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+          style={{ 
+            backgroundColor: `${bgColor}20`, // 20% opacity of the color
+            color: bgColor 
+          }}>
+          {status}
+        </span>
+        {reason && (
+          <button 
+            className="ml-1 text-gray-500 hover:text-gray-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowReasonModal(true);
+            }}
+            title="View reason"
+          >
+            <FiMessageSquare className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      {/* Reason Modal */}
+      {showReasonModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 transition-opacity" 
+              aria-hidden="true"
+              onClick={() => setShowReasonModal(false)}
+            >
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            {/* Modal container */}
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <FiMessageSquare className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg capitalize leading-6 font-medium text-gray-900">
+                      Status : {status}
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm capitalize text-gray-500">
+                       Reason : {reason}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setShowReasonModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -949,7 +1164,7 @@ function StatusBadge({ status, hexcode = "#A78BFA" }) {
 function FileUpload({ id, type, onChange, file, status }) {
   // Check if application is in a status that allows file uploads
   const isUploadDisabled = ["Completed", "Rejected"].includes(status);
-  
+
   return (
     <div className="flex items-center">
       {isUploadDisabled ? (
@@ -957,7 +1172,7 @@ function FileUpload({ id, type, onChange, file, status }) {
       ) : (
         <label htmlFor={`file-${type}-${id}`} className="cursor-pointer">
           <div className="flex items-center text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded">
-            <FiUpload className="h-3 w-3 mr-1" /> 
+            <FiUpload className="h-3 w-3 mr-1" />
             UPLOAD {type.toUpperCase()}
           </div>
           <input
