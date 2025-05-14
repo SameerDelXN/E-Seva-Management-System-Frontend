@@ -32,6 +32,7 @@ const ServiceModal = ({
   const [plans, setPlans] = useState([]);
   const [newplan, selectnewplan] = useState([]);
   const [activeSection, setActiveSection] = useState('services');
+  const [loading,setLoading] = useState(false)
   const [statuses, setStatuses] = useState(service?.status || [
     { id: 1, status: 'OFFICE VR CARD ALE AHE', color: '#32a852', askReason: false },
     { id: 2, status: 'E PAN GENERATED', color: '#b3f542', askReason: false },
@@ -158,6 +159,7 @@ const ServiceModal = ({
   };
 
   const handleAddStatus = async() => {
+    setLoading(true)
     console.log("id is ", formData.id);
     // if (newStatus.status.trim() === '') return;
     
@@ -183,6 +185,8 @@ const ServiceModal = ({
         const result = await response.json();
     
         if (response.ok) {
+          setLoading(false)
+          onClose()
           console.log("✅ Status added:", result);
           fetchServices();
           // Optional: Update local state or show success message
@@ -372,10 +376,10 @@ const ServiceModal = ({
             <button
               type="button"
               onClick={handleAddStatus}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"
+              className={loading ? "px-5 py-2.5 bg-green-300 text-white rounded-lg text-sm transition duration-200 hover:bg-green-300 shadow-md hover:shadow-lg flex items-center gap-2" : "px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"}
             >
               <Check className="w-4 h-4" />
-              {editingStatus ? 'Save Changes' : 'Add Status'}
+              {loading ? 'Adding Status' : 'Add Status'}
             </button>
           </div>
         </div>

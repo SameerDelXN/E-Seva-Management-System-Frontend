@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FiFile,FiSave, FiPlus,FiPackage,FiClock, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard, FiDownload, FiTrash2 } from 'react-icons/fi';
+import { FiFile,FiSave, FiPlus,FiPackage,FiChevronLeft ,FiChevronRight ,FiClock, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard, FiDownload, FiTrash2 } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
 import axios from 'axios';
 export default function ServiceGroupsUI() {
   const { session } = useSession();
   const [serviceGroups, setServiceGroups] = useState([]);
+   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +18,29 @@ export default function ServiceGroupsUI() {
   const [formLoading, setFormLoading] = useState(false);
   const [applications, setApplications] = useState([]);
   const [appLoading, setAppLoading] = useState(true);
+   const [currentPage, setCurrentPage] = useState(1);
+  const applicationsPerPage = 5;
+
+
+   const indexOfLastApplication = currentPage * applicationsPerPage;
+  const indexOfFirstApplication = indexOfLastApplication - applicationsPerPage;
+  const currentApplications = applications.slice(indexOfFirstApplication, indexOfLastApplication);
+  
+  // Calculate total pages
+  const totalPages = Math.ceil(applications.length / applicationsPerPage);
+
+  // Change page
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   // Agent's data from session
   const agentData = {
@@ -120,6 +144,44 @@ export default function ServiceGroupsUI() {
     
     fetchServiceGroups();
   }, []);
+  useEffect(() => {
+    const fetchWalletAmount = async () => {
+      if (!session?.user?._id) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/wallet/${session.user._id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setWalletAmount(data.wallet);
+        } else {
+          setError("Failed to fetch wallet amount");
+        }
+      } catch (err) {
+        setError("Error connecting to wallet service");
+        console.error("Error fetching wallet:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWalletAmount();
+  }, [session]);
+    const handleButtonClick = (group,service) => {
+    const servicePrice = getPriceForAgentPlan(service);
+    
+    if (walletAmount >= servicePrice) {
+      handleOpenModal(group, service);
+    } else {
+      console.log("Insufficient amount in wallet");
+      // You could also show this as a toast notification
+      setError("Insufficient balance in wallet");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
 
   // Handle form input changes
   const handleInputChange = (e,label) => {
@@ -529,85 +591,124 @@ const handleCloseModal = () => {
             <p className="text-sm text-gray-400 mt-1">Submit your first application using the services below</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Service
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Submitted
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Delivery
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {applications.map((application) => (
-                  <tr key={application._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600 font-medium">
-                            {application.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{application.name}</div>
-                          <div className="text-sm text-gray-500">{application.phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{application.service.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span 
-                        className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
-                        style={{ 
-                          backgroundColor: application.initialStatus[0]?.hexcode || '#e5e7eb',
-                          color: getContrastColor(application.initialStatus[0]?.hexcode || '#e5e7eb')
-                        }}
-                      >
-                        {application.initialStatus[0]?.name || 'Pending'}
+          <div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Service
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Submitted
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Delivery
+              </th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {currentApplications.map((application) => (
+              <tr key={application._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center">
+                      <span className="text-gray-600 font-medium">
+                        {application.name.charAt(0).toUpperCase()}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ₹{application.amount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(application.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {application.delivery}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleViewDetails(application)}
-                        className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
-                      >
-                        <FiEye className="mr-1" /> View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">{application.name}</div>
+                      <div className="text-sm text-gray-500">{application.phone}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{application.service.name}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span 
+                    className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
+                    style={{ 
+                      backgroundColor: application.initialStatus[0]?.hexcode || '#e5e7eb',
+                      color: getContrastColor(application.initialStatus[0]?.hexcode || '#e5e7eb')
+                    }}
+                  >
+                    {application.initialStatus[0]?.name || 'Pending'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  ₹{application.amount}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(application.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {application.delivery}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleViewDetails(application)}
+                    className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
+                  >
+                    <FiEye className="mr-1" /> View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Pagination controls */}
+      <div className="mt-4 flex items-center justify-between p-4">
+        <div className="text-sm text-gray-700">
+          Showing <span className="font-medium">{indexOfFirstApplication + 1}</span> to{" "}
+          <span className="font-medium">
+            {Math.min(indexOfLastApplication, applications.length)}
+          </span>{" "}
+          of <span className="font-medium">{applications.length}</span> applications
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+            className={`inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium ${
+              currentPage === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <FiChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </button>
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className={`inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium ${
+              currentPage === totalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            Next
+            <FiChevronRight className="h-4 w-4 ml-1" />
+          </button>
+        </div>
+      </div>
+    </div>
         )}
       </div>
     );
@@ -783,13 +884,33 @@ const handleCloseModal = () => {
                               </p>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleOpenModal(group, service)}
-                            className="flex items-center text-sm bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1 rounded-md font-medium"
-                          >
-                            ₹{getPriceForAgentPlan(service)}
-                            <FiPlus className="ml-2 h-4 w-4" />
-                          </button>
+                              <div className="relative">
+      <button
+        onClick={()=>handleButtonClick(group, service)}
+        disabled={loading}
+        className={`flex items-center text-sm px-3 py-1 rounded-md font-medium ${
+          loading 
+            ? "bg-gray-100 text-gray-400"
+            : "bg-green-50 hover:bg-green-100 text-green-700"
+        }`}
+      >
+        {loading ? (
+          "Loading..."
+        ) : (
+          <>
+            ₹{getPriceForAgentPlan(service)}
+            <FiPlus className="ml-2 h-4 w-4" />
+          </>
+        )}
+      </button>
+      
+      {error && (
+        <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+          {error}
+        </div>
+      )}
+    </div>
+
                         </div>
                       ))}
                     </div>

@@ -7,41 +7,41 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [rechargeData, setRechargeData] = useState([]);
   
-  const rechargeData = [
-    {
-      id: 1,
-      agentName: 'SHIVANSH ENTERPRISES (AJAY DHOTRE)',
-      dateTime: '2025-03-22 05:53:42',
-      balanceBefore: 100.0,
-      rechargeAmount: 180.0,
-      balanceAfter: 280.0,
-    },
-    {
-      id: 2,
-      agentName: 'SHIVANSH ENTERPRISES (AJAY DHOTRE)',
-      dateTime: '2025-03-22 04:35:18',
-      balanceBefore: 360.0,
-      rechargeAmount: 100.0,
-      balanceAfter: 460.0,
-    },
-    {
-      id: 3,
-      agentName: 'Amol Awari (Amol Awari)',
-      dateTime: '2025-03-10 06:14:16',
-      balanceBefore: 600.0,
-      rechargeAmount: 1000.0,
-      balanceAfter: 1600.0,
-    },
-  ];
-
-  // Simulate data loading
+  // Fetch data from API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+    const fetchRechargeHistory = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch('https://dokument-guru-backend.vercel.app/api/agent/recharge/history');
+        const result = await response.json();
+        
+        if (result.data) {
+          // Map the response data to match our expected format
+          const formattedData = result.data.map((item, index) => ({
+            id: index + 1,
+            _id: item._id,
+            agentId: item.agentId,
+            agentName: item.agentName,
+            dateTime: item.dateTime,
+            balanceBefore: item.balanceBefore,
+            rechargeAmount: item.rechargeAmount,
+            balanceAfter: item.balanceAfter,
+          }));
+          
+          setRechargeData(formattedData);
+        }
+      } catch (error) {
+        console.error("Error fetching recharge history:", error);
+        // In case of error, you might want to show some fallback data
+        setRechargeData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRechargeHistory();
   }, []);
 
   const filteredData = rechargeData.filter(item =>
@@ -82,6 +82,10 @@ export default function App() {
 
   const handleExport = () => {
     alert('Export functionality would be implemented here');
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
   };
 
   return (
@@ -133,7 +137,7 @@ export default function App() {
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-500">Highest Recharge</p>
                 <p className="text-2xl font-bold text-green-600">
-                  ₹{Math.max(...rechargeData.map(item => item.rechargeAmount)).toFixed(2)}
+                  ₹{rechargeData.length > 0 ? Math.max(...rechargeData.map(item => item.rechargeAmount)).toFixed(2) : '0.00'}
                 </p>
               </div>
             </div>
@@ -206,35 +210,43 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedData.map((item) => (
-                    <tr 
-                      key={item.id} 
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <div className="font-medium">{item.agentName}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(item.dateTime).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        ₹{item.balanceBefore.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
-                        <span className="text-green-600">
-                          +₹{item.rechargeAmount.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
-                        <span className="text-green-600">
-                          ₹{item.balanceAfter.toFixed(2)}
-                        </span>
+                  {sortedData.length > 0 ? (
+                    sortedData.map((item) => (
+                      <tr 
+                        key={item._id} 
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          <div className="font-medium">{item.agentName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(item.dateTime)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                          ₹{item.balanceBefore.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                          <span className="text-green-600">
+                            +₹{item.rechargeAmount.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                          <span className="text-green-600">
+                            ₹{item.balanceAfter.toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No recharge data found
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             )}
