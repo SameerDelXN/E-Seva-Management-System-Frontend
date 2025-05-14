@@ -70,7 +70,9 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
       {
                 name: "Active",
                 hexcode: "#4CAF50",
-                askreason: false
+                askreason: false,
+                 priority: 1
+                
               }
     ]
     
@@ -469,7 +471,8 @@ const App = () => {
         ? serviceData.status.map(s => ({
             name: s.name,
             hexcode: s.hexcode,
-            askreason: s.askreason
+            askreason: s.askreason,
+            priority:s.priority
           }))
         : []
     };
@@ -613,6 +616,7 @@ const App = () => {
           selectedPlanPrices={selectedPlanPrices}
           setSelectedPlanPrices={setSelectedPlanPrices}
           serviceGroups={serviceGroups}
+          fetchServices={fetchServices} 
         />
       ) : (
         <AddServiceModal
