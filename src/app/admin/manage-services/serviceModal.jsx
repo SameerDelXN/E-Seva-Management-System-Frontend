@@ -7,7 +7,7 @@ const ServiceModal = ({
   isOpen, 
   onClose, 
   service, 
-  
+  fetchServices,
   onSave,
   isEdit,
   showUpdateSection,
@@ -48,7 +48,8 @@ const ServiceModal = ({
   const [newStatus, setNewStatus] = useState({
     name: '',
     hexcode: '#32a852',
-    askReason: false
+    askReason: false,
+    priority: 0
   });
 
   const [isAdding, setIsAdding] = useState(false);
@@ -187,6 +188,7 @@ const ServiceModal = ({
           setLoading(false)
           onClose()
           console.log("✅ Status added:", result);
+          fetchServices();
           // Optional: Update local state or show success message
         } else {
           console.error("❌ Error:", result.message);
@@ -200,7 +202,8 @@ const ServiceModal = ({
     setNewStatus({
       status: '',
       color: '#32a852',
-      askReason: false
+      askReason: false,
+       priority: 0
     });
     setIsAdding(false);
   };
@@ -309,7 +312,7 @@ const ServiceModal = ({
         </button>
       </div>
 
-      {isAdding && (
+      {/* {isAdding && (
         <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
           <h3 className="font-medium mb-4 text-lg text-gray-700">
             {editingStatus ? 'Edit Status' : 'Add New Status'}
@@ -380,7 +383,90 @@ const ServiceModal = ({
             </button>
           </div>
         </div>
-      )}
+      )} */}
+      {isAdding && (
+  <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
+    <h3 className="font-medium mb-4 text-lg text-gray-700">
+      {editingStatus ? 'Edit Status' : 'Add New Status'}
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Status Name</label>
+        <input
+          type="text"
+          value={newStatus.name}
+          onChange={(e) => setNewStatus({ ...newStatus, name: e.target.value })}
+          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter status name"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Color Code</label>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={newStatus.hexcode}
+            onChange={(e) => setNewStatus({ ...newStatus, hexcode: e.target.value })}
+            className="w-12 h-12 border border-gray-300 rounded-lg cursor-pointer"
+          />
+          <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{newStatus.hexcode}</span>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Ask Reason</label>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={newStatus.askReason}
+              onChange={() => setNewStatus({ ...newStatus, askReason: !newStatus.askReason })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label className="ml-2 text-sm text-gray-700">
+              Require reason for this status
+            </label>
+          </div>
+        </div>
+      </div>
+      <div className="col-span-3 md:col-span-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+        <input
+          type="number"
+          value={newStatus.priority}
+          onChange={(e) => setNewStatus({ ...newStatus, priority: Number(e.target.value) })}
+          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter priority"
+        />
+      </div>
+    </div>
+    <div className="flex justify-end gap-3 mt-6">
+      <button
+        type="button"
+        onClick={() => {
+          setIsAdding(false);
+          setEditingStatus(null);
+          setNewStatus({
+            name: '',
+            hexcode: '#32a852',
+            askReason: false,
+            priority: 0
+          });
+        }}
+        className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm transition duration-200 hover:bg-gray-300 shadow-sm"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={handleAddStatus}
+        className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"
+      >
+        <Check className="w-4 h-4" />
+        {editingStatus ? 'Save Changes' : 'Add Status'}
+      </button>
+    </div>
+  </div>
+)}
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="min-w-full bg-white divide-y divide-gray-200">
@@ -394,7 +480,7 @@ const ServiceModal = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {statuses.map((status, index) => (
+            {statuses.sort((a, b) => a.priority - b.priority).map((status, index) => (
               <tr key={index} className="hover:bg-gray-50 transition duration-150">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{index + 1}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{status.name}</td>
