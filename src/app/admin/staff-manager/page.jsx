@@ -31,14 +31,25 @@ const StaffManagement = () => {
 
   // Form validation schema
   const validationSchema = Yup.object().shape({
-    name: Yup.string().required('Full name is required').min(3, 'Minimum 3 characters'),
-    username: Yup.string().required('Username is required').min(4, 'Minimum 4 characters'),
-    password: Yup.string().required('Password is required').min(8, 'Minimum 8 characters'),
-    contactNo: Yup.string()
-      .required('Phone number is required')
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
-    city: Yup.string().required('City is required'),
-  });
+  name: Yup.string().required('Full name is required').min(3, 'Minimum 3 characters'),
+  username: Yup.string().required('Username is required').min(4, 'Minimum 4 characters'),
+  password: Yup.string().required('Password is required').min(8, 'Minimum 8 characters'),
+  contactNo: Yup.string()
+    .required('Phone number is required')
+    .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+  city: Yup.string()
+    .required('City is required')
+    .test(
+      'unique-city',
+      'A staff manager already exists for this location',
+      function(value) {
+        // Skip this check if we're editing (not creating new)
+        if (editingStaff) return true;
+        
+        return !staffs.some(staff => staff.city === value);
+      }
+    ),
+});
 
   // Fetch staff managers from the API
   const fetchStaffManager = async () => {
@@ -107,58 +118,60 @@ const StaffManagement = () => {
 
   // Handle form submission
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-    try {
-      console.log("Form Submitted with values:", values);
-      
-      let url, method;
-      if (editingStaff) {
-        // Update existing staff
-        url = `https://dokument-guru-backend.vercel.app/api/admin/staff-manager/update-manager/${editingStaff._id}`;
-        method = 'PATCH';
-      } else {
-        // Add new staff
-        url = 'https://dokument-guru-backend.vercel.app/api/admin/staff-manager/add-manager';
-        method = 'POST';
-      }
-  
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        console.log("API Response:", data);
-        // Show appropriate success popup
-        if (editingStaff) {
-          setShowUpdateSuccess(true);
-        } else {
-          setShowAddSuccess(true);
-        }
-        
-        // Refresh the staff list after successful operation
-        const updatedStaffs = await fetchStaffManager();
-        setStaffs(updatedStaffs);
-        
-        // Reset form and UI state
-        resetForm();
-        setEditingStaff(null);
-        setShowAddForm(false);
-      } else {
-        console.error("API Error:", data);
-        alert(`Failed to ${editingStaff ? 'update' : 'register'} staff. Please try again.`);
-      }
-    } catch (error) {
-      console.error("Network Error:", error);
-      alert("Network error. Please check your connection.");
-    } finally {
+  try {
+    // Check for existing staff with same location (client-side validation)
+    if (!editingStaff && staffs.some(staff => staff.city === values.city)) {
+      alert('A staff manager already exists for this location');
       setSubmitting(false);
+      return;
     }
-  };
+
+    console.log("Form Submitted with values:", values);
+    
+    let url, method;
+    if (editingStaff) {
+      url = `https://dokument-guru-backend.vercel.app/api/admin/staff-manager/update-manager/${editingStaff._id}`;
+      method = 'PATCH';
+    } else {
+      url = 'https://dokument-guru-backend.vercel.app/api/admin/staff-manager/add-manager';
+      method = 'POST';
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(values),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log("API Response:", data);
+      if (editingStaff) {
+        setShowUpdateSuccess(true);
+      } else {
+        setShowAddSuccess(true);
+      }
+      
+      const updatedStaffs = await fetchStaffManager();
+      setStaffs(updatedStaffs);
+      
+      resetForm();
+      setEditingStaff(null);
+      setShowAddForm(false);
+    } else {
+      console.error("API Error:", data);
+      alert(data.message || `Failed to ${editingStaff ? 'update' : 'register'} staff. Please try again.`);
+    }
+  } catch (error) {
+    console.error("Network Error:", error);
+    alert("Network error. Please check your connection.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   // Delete a staff member
   const handleDeleteStaff = async(id) => {
@@ -224,7 +237,7 @@ const StaffManagement = () => {
       )}
     </ErrorMessage>
   );
-
+  
   // Add/Edit staff form component
   const StaffForm = () => {
     const initialValues = editingStaff || {
@@ -294,29 +307,42 @@ const StaffManagement = () => {
                     </div>
 
                     {/* City/District */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">City/District *</label>
-                      <div className="relative">
-                        <Field
-                          as="select"
-                          name="city"
-                          className={`w-full px-4 py-3 border ${values.city ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
-                        >
-                          <option value="">Select a city/district</option>
-                          {isLoadingLocations ? (
-                            <option value="" disabled>Loading locations...</option>
-                          ) : (
-                            locations.map(location => (
-                              <option key={location._id} value={location.district}>
-                                {location.district}, {location.state}
-                              </option>
-                            ))
-                          )}
-                        </Field>
-                        <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
-                      </div>
-                      <CustomErrorMessage name="city" />
-                    </div>
+                   <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">City/District *</label>
+  <div className="relative">
+    <Field
+      as="select"
+      name="city"
+      className={`w-full px-4 py-3 border ${values.city ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
+      disabled={editingStaff} // Disable editing location if it's an edit
+    >
+      <option value="">Select a city/district</option>
+      {isLoadingLocations ? (
+        <option value="" disabled>Loading locations...</option>
+      ) : (
+        locations.map(location => {
+          const isAssigned = staffs.some(staff => 
+            staff.city === location.district && 
+            (!editingStaff || staff._id !== editingStaff._id)
+          );
+          return (
+            <option 
+              key={location._id} 
+              value={location.district}
+              disabled={isAssigned && !editingStaff}
+              className={isAssigned && !editingStaff ? 'text-gray-400 bg-gray-100' : ''}
+            >
+              {location.district}, {location.state}
+              {isAssigned && !editingStaff && ' (Already assigned)'}
+            </option>
+          );
+        })
+      )}
+    </Field>
+    <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
+  </div>
+  <CustomErrorMessage name="city" />
+</div>
                   </div>
                 </div>
 
@@ -350,9 +376,9 @@ const StaffManagement = () => {
                       <div className="relative">
                         <Field
                           name="password"
-                          type="password"
+                          type="text"
                           className={`w-full px-4 py-3 border ${values.password ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                          placeholder="••••••••"
+                          
                         />
                       </div>
                       <CustomErrorMessage name="password" />

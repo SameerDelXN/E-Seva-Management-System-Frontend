@@ -277,6 +277,56 @@ export default function StaffDashboard() {
     setEditingStatusId(null);
     setEditingStatus("");
   };
+  function DeliveryDateAlert({ deliveryDate }) {
+  if (!deliveryDate) return null;
+  
+  // Parse date properly - handle both DD/MM/YYYY format and Date objects
+  const parseDateString = (dateStr) => {
+    if (dateStr instanceof Date) return dateStr;
+    
+    // Check if date is in DD/MM/YYYY format
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      const [day, month, year] = dateStr.split('/');
+      return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+    }
+    
+    // Otherwise try standard Date constructor
+    return new Date(dateStr);
+  };
+  
+  const today = new Date();
+  const delivery = parseDateString(deliveryDate);
+  
+  // Validate that we have a valid date
+  if (isNaN(delivery.getTime())) {
+    console.error('Invalid date format:', deliveryDate);
+    return <span className="text-xs text-red-500">Invalid date format</span>;
+  }
+  
+  const diffTime = delivery - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  console.log("Delivery date:", delivery);
+  console.log("Difference in days:", diffDays);
+  
+  if (diffDays < 0) {
+    return (
+      <span className="text-xs text-red-500 font-medium">
+        Overdue by {Math.abs(diffDays)} days
+      </span>
+    );
+  }
+  
+  if (diffDays <= 3) {
+    return (
+      <span className="text-xs text-yellow-600 font-medium animate-pulse">
+        Due in {diffDays} day{diffDays !== 1 ? 's' : ''}
+      </span>
+    );
+  }
+  
+  return null;
+}
 
   // const handleStatusChange = (e) => {
   //   setEditingStatus(e.target.value);
@@ -500,7 +550,7 @@ export default function StaffDashboard() {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th> */}
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remark</th>
@@ -518,8 +568,8 @@ export default function StaffDashboard() {
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(application.date).toLocaleDateString('en-GB')}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{application.delivery}</div><p><DeliveryDateAlert deliveryDate={application.delivery} /></p></td>
                           {/* <td className="px-6 py-4 whitespace-nowrap">
                             {editingStatusId === application._id ? (
                               <div className="flex flex-col space-y-2">
@@ -652,7 +702,7 @@ export default function StaffDashboard() {
                               ? application.service.name || JSON.stringify(application.service)
                               : application.service}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{application.amount}</td>
+                          {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{application.amount}</td> */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {application.document ? (
                               <div className="flex items-center">
@@ -787,7 +837,7 @@ export default function StaffDashboard() {
                       </div>
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Application Date</h4>
-                        <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.date}</p>
+                        <p className="mt-1 text-sm font-medium text-gray-900">{new Date(selectedApplication.date).toLocaleDateString('en-GB')}</p>
                       </div>
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Service Type</h4>
@@ -853,7 +903,7 @@ export default function StaffDashboard() {
                     </div>
 
                     {/* Remarks Section */}
-                    <div className="mb-6">
+                    {/* <div className="mb-6">
                       <h4 className="text-lg font-medium text-gray-700 mb-3">Application Remarks</h4>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                         {selectedApplication.remark ? (
@@ -878,7 +928,7 @@ export default function StaffDashboard() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>

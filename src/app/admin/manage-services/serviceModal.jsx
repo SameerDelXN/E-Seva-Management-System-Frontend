@@ -883,222 +883,310 @@ const ServiceModal = ({
 ) : activeSection === 'preview' ? (
   renderPreview()
 ) : activeSection === 'with-subscription' ? (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">Manage Prices</h2>
-    
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <h3 className="font-medium text-gray-700 mb-4">Available Plans</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {locations?.map((location, index) => (
-          <div 
-            key={index}
-            onClick={() => handleAvailablePlansClick(location)}
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              selectedPlan?.location === location.location
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-blue-300'
-            }`}
-          >
-            <h4 className="font-medium text-gray-800">{location.location}</h4>
-            <p className="text-sm text-gray-500 mt-1">
-              {location.plans.length} plans available
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {selectedPlan && (
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-medium text-gray-700">
-            Plans for {selectedPlan.location}
-          </h3>
-          <button
-            onClick={() => setShowUpdateSection(!showUpdateSection)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm flex items-center gap-2"
-          >
-            {showUpdateSection ? 'Hide' : 'Add New Plan'}
-          </button>
-        </div>
-
-        {showUpdateSection && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
-            <h4 className="font-medium text-gray-700 mb-3">Add/Update Plan</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter plan name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter price"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (months)</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter duration"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg">
-                Cancel
-              </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                Save Plan
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {selectedPlan.plans.map((plan, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {plan.plan}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ₹{plan.price}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {plan.duration} months
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleAddPricesClick(plan)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                      <button className="text-red-600 hover:text-red-800">
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )}
-
-    {/* Save Changes Button */}
-    <div className="mt-6 flex justify-end">
-      <button
-        onClick={handleSubmit}
-        disabled={isSaving}
-        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm transition duration-200 hover:bg-blue-700 shadow-md hover:shadow-lg flex items-center gap-2"
-      >
-        {isSaving ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Saving...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4" />
-            Save Changes
-          </>
-        )}
-      </button>
-    </div>
-  </div>
-) : activeSection === 'without-subscription' && (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">Prices without Subscription</h2>
-    
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <h3 className="font-medium text-gray-700 mb-4">
-        Plans for {selectedPlanPrices?.plan}
-      </h3>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {newplan?.prices?.map((price, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {price.location}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ₹{price.price}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-800">
-                      Edit
-                    </button>
-                    <button className="text-red-600 hover:text-red-800">
-                      Delete
+            <div className="space-y-6">
+              <div className="mt-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <h3 className="text-lg font-semibold">Appointment Price:</h3>
+                  <div className="flex items-center">
+                    <span className="text-gray-600 text-lg mr-2">₹</span>
+                    <input
+                      type="number"
+                      className="w-32 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="300.00"
+                      value={formData.price}
+                      onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    />
+                    <button 
+                      onClick={handleSubmit}
+                      className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Update
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                </div>
 
-    {/* Save Changes Button */}
-    <div className="mt-6 flex justify-end">
-      <button
-        onClick={handleSubmit}
-        disabled={isSaving}
-        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm transition duration-200 hover:bg-blue-700 shadow-md hover:shadow-lg flex items-center gap-2"
-      >
-        {isSaving ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Saving...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4" />
-            Save Changes
-          </>
-        )}
-      </button>
-    </div>
-  </div>
-)}
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold mb-4">Prices with Subscription</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      {/* <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Pune</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Maharashtra</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <button 
+                              onClick={() => handleAvailablePlansClick({
+                                id: 1,
+                                name: 'Pune',
+                                state: 'Maharashtra'
+                              })}
+                              className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Available Plans
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Beed</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Maharashtra</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <button 
+                              onClick={() => handleAvailablePlansClick({
+                                id: 2,
+                                name: 'Beed',
+                                state: 'Maharashtra'
+                              })}
+                              className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Available Plans
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody> */}
+
+{/* <tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
+    <tr key={item._id}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location?.district}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location?.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button
+          onClick={() => handleAvailablePlansClick({
+            id: item._id,
+            name: item.location?.district,
+            state: item.location?.state,
+            plans: item.plans // send plans if needed
+          })}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+        >
+          Available Plans
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody> */}
+
+<tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
+    <tr key={item._id}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.district}</td> 
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button
+          onClick={() => handleAvailablePlansClick({
+            id: item._id,
+            name: item.district,
+            state: item.state,
+            plans: item.plans
+          })}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+        >
+          Available Plans
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )   : activeSection === 'without-subscription' ? (
+            <div className="space-y-6">
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">
+                    Prices without Subscription {selectedPlan && `- ${selectedPlan.name}, ${selectedPlan.state}`}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setActiveSection('with-subscription');
+                      setSelectedPlan(null);
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Back
+                  </button>
+                </div>
+                
+                <div className="mt-8">
+                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    {/* <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Amol Awari</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 1,
+                              name: 'Amol Awari',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 2,
+                              name: 'Driving School',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">maha e seva monthly Suscription</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 3,
+                              name: 'maha e seva monthly Suscription',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">4</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dokument Guru Gold</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 4,
+                              name: 'Dokument Guru Gold',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">5</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School Pro</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 5,
+                              name: 'Driving School Pro',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody> */}
+
+<tbody className="divide-y divide-gray-200">
+  {newplan?.map((planItem, index) => (
+    <tr key={index}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{planItem.planName}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button 
+          onClick={() => handleAddPricesClick({
+            id: planItem.plan_id,
+            name: planItem.planName,
+            govtPrice: planItem.price,
+            commissionPrice: '43.00',
+            taxPercentage: '0.00',
+            tatkalGovtPrice: planItem.price,
+            tatkalCommissionPrice: '43.00',
+            tatkalTaxPercentage: '0.00'
+          })}
+          className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+        >
+          Add Prices
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 flex items-center gap-2"
+            >
+              <Check className="w-4 h-4" /> Save Changes
+            </button>
+          </div>
         </div>
       </div>
     </div>

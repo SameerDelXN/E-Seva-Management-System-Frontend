@@ -26,6 +26,7 @@ const [selectedStaffServices, setSelectedStaffServices] = useState([]);
   
   // Popup states
   const [showAddSuccess, setShowAddSuccess] = useState(false);
+  const [locations, setLocations] = useState([]);
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false);
@@ -52,6 +53,34 @@ const [selectedStaffServices, setSelectedStaffServices] = useState([]);
         return [];
     }
 };
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // Fetch service groups
+      const serviceGroupsResponse = await fetch('https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/getAll-Groups');
+      const serviceGroupsData = await serviceGroupsResponse.json();
+      
+      if (serviceGroupsData && serviceGroupsData.serviceGroups) {
+        setServiceGroups(serviceGroupsData.serviceGroups);
+      }
+      
+      // Fetch locations
+      const locationsResponse = await fetch('https://dokument-guru-backend.vercel.app/api/admin/location/fetch-all');
+      const locationsData = await locationsResponse.json();
+      
+      if (locationsData && locationsData.locations) {
+        setLocations(locationsData.locations);
+      }
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setIsLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 const ServicesModal = ({ services, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -295,8 +324,8 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
       
       // API call to save or update staff
       const url = editingStaff 
-        ? ` https://dokument-guru-backend.vercel.app/api/admin/staff/update-staff/${editingStaff._id}` 
-        : 'https://dokument-guru-backend.vercel.app/api/admin/staff/add-staff';
+        ? ` http://localhost:3001/api/admin/staff/update-staff/${editingStaff._id}` 
+        : 'http://localhost:3001/api/admin/staff/add-staff';
         
       const response = await fetch(url, {
         method: editingStaff ? 'PUT' : 'POST',
@@ -314,6 +343,7 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
         setSelectedGroup(null);
         setSelectedServices([]);
         setShowAddForm(false);
+        fetchStaffs()
         setEditingStaff(null);
         // Handle success - reset form or close modal
         if (!editingStaff) resetForm();
@@ -327,7 +357,7 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
         
       } else {
         // Handle error response
-        alert(data.message || 'Something went wrong');
+        alert(data.error || 'Something went wrong');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -464,19 +494,19 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
                     <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
                     <div className="relative">
                       <Field
-                        as="select"
-                        name="location"
-                        className={`w-full px-4 py-3 border ${
-                          values.location ? 'border-green-300' : 'border-gray-300'
-                        } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
-                      >
-                        <option value="">Select a location</option>
-                        <option value="Pune">Pune</option>
-                        <option value="Mumbai">Mumbai</option>
-                        <option value="AhilyaNagar">AhilyaNagar</option>
-                        <option value="SambhajiNagar">SambhajiNagar</option>
-                        <option value="Delhi">Delhi</option>
-                      </Field>
+  as="select"
+  name="location"
+  className={`w-full px-4 py-3 border ${
+    values.location ? 'border-green-300' : 'border-gray-300'
+  } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none transition-all bg-white`}
+>
+  <option value="">Select a location</option>
+  {locations.map((location) => (
+    <option key={location._id} value={location.district}>
+      {location.district}, {location.state}
+    </option>
+  ))}
+</Field>
                       <FiChevronDown className="absolute right-3 top-4 text-gray-400 pointer-events-none" />
                     </div>
                     {errors.location && touched.location && <ErrorMessage>{errors.location}</ErrorMessage>}
@@ -617,11 +647,11 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
                     <div className="relative">
                       <Field
                         name="password"
-                        type="password"
+                        type="text"
                         className={`w-full px-4 py-3 border ${
                           values.password ? 'border-green-300' : 'border-gray-300'
                         } rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                        placeholder="••••••••"
+                       
                       />
                     </div>
                     {errors.password && touched.password && <ErrorMessage>{errors.password}</ErrorMessage>}

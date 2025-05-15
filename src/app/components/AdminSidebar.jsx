@@ -315,6 +315,11 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
             label="Home" 
             href="/admin/"
           />
+           <SidebarItem 
+            icon={HomeIcon} 
+            label="Due Applications" 
+            href="/admin/due-applications"
+          />
           
           {/* Agent Management */}
           <SidebarSection title="Agent Management">
@@ -507,6 +512,11 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                     icon={HomeIcon} 
                     label="Home" 
                     href="/admin/"
+                  />
+                  <MobileSidebarItem 
+                    icon={HomeIcon} 
+            label="Due Applications" 
+            href="/admin/due-applications"
                   />
                   
                   {/* Agent Management */}

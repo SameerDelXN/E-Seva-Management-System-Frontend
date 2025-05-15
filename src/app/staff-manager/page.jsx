@@ -62,44 +62,79 @@ export default function StaffManagerDashboard() {
   console.log("sess = ",session)
   // Fetch all applications
   const fetchApplications = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/filter?location=${session?.user?.city}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch applications: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setApplications(data);
-     
-      
-      // Calculate stats
-      const unassignedApps = data.filter(app => !app.staff || app.staff === "Not Assigned").length;
-      const inProgressApps = data.filter(app => {
-        const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
-        return status === "In Progress";
-      }).length;
-      
-      const completedApps = data.filter(app => {
-        const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
-        return status === "Completed";
-      }).length;
-      
-      setStats({
-        total: data.length,
-        unassigned: unassignedApps,
-        inProgress: inProgressApps,
-        completed: completedApps
-      });
-      
-    } catch (err) {
-      console.error("Error fetching applications:", err);
-      setError("Failed to load applications. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const response = await fetch(`${API_BASE_URL}/filter?location=${session?.user?.city}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch applications: ${response.status}`);
     }
-  };
+    
+    const data = await response.json();
+    setApplications(data);
+    
+    // Calculate stats - updated to properly check for unassigned
+    const unassignedApps = data.filter(app => {
+      console.log("appu = ",app)
+      const staff = app.staff[0];
+      return !staff || 
+             staff.name === "Not Assigned" || 
+             (typeof staff === 'object' && (!staff.name || staff.name === "Not Assigned"));
+    }).length;
+    
+    const inProgressApps = data.filter(app => {
+      const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
+      return status === "In Progress";
+    }).length;
+    
+    const completedApps = data.filter(app => {
+      const status = app.initialStatus?.[0]?.name || app.status || "Initiated";
+      return status === "Completed";
+    }).length;
+
+    // Count overdue applications
+    const overdueApps = data.filter(app => {
+  if (!app.delivery) return false;
+
+  console.log("deli = ", app.delivery); // e.g. "13/05/2025"
+
+  const [day, month, year] = app.delivery.split('/');
+  const deliveryDate = new Date(`${year}-${month}-${day}`);
+  const today = new Date();
+
+  // Remove the time portion of today for accurate comparison
+  today.setHours(0, 0, 0, 0);
+
+  return deliveryDate < today;
+}).length;
+
+
+    // Count applications due within 3 days
+    const dueSoonApps = data.filter(app => {
+      if (!app.delivery) return false;
+      const deliveryDate = new Date(app.delivery);
+      const today = new Date();
+      const diffTime = deliveryDate - today;
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      return diffDays <= 3 && diffDays >= 0;
+    }).length;
+    
+    setStats({
+      total: data.length,
+      unassigned: unassignedApps,
+      inProgress: inProgressApps,
+      completed: completedApps,
+      overdue: overdueApps,
+      dueSoon: dueSoonApps
+    });
+    
+  } catch (err) {
+    console.error("Error fetching applications:", err);
+    setError("Failed to load applications. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 console.log("appi",applications)
   // Fetch all staff members
   const fetchStaffMembers = async () => {
@@ -568,6 +603,57 @@ console.log("appi",applications)
       alert("Failed to add document remark. Please try again.");
     }
   };
+ function DeliveryDateAlert({ deliveryDate }) {
+  if (!deliveryDate) return null;
+  
+  // Parse date properly - handle both DD/MM/YYYY format and Date objects
+  const parseDateString = (dateStr) => {
+    if (dateStr instanceof Date) return dateStr;
+    
+    // Check if date is in DD/MM/YYYY format
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      const [day, month, year] = dateStr.split('/');
+      return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+    }
+    
+    // Otherwise try standard Date constructor
+    return new Date(dateStr);
+  };
+  
+  const today = new Date();
+  const delivery = parseDateString(deliveryDate);
+  
+  // Validate that we have a valid date
+  if (isNaN(delivery.getTime())) {
+    console.error('Invalid date format:', deliveryDate);
+    return <span className="text-xs text-red-500">Invalid date format</span>;
+  }
+  
+  const diffTime = delivery - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  console.log("Delivery date:", delivery);
+  console.log("Difference in days:", diffDays);
+  
+  if (diffDays < 0) {
+    return (
+      <span className="text-xs text-red-500 font-medium">
+        Overdue by {Math.abs(diffDays)} days
+      </span>
+    );
+  }
+  
+  if (diffDays <= 3) {
+    return (
+      <span className="text-xs text-yellow-600 font-medium animate-pulse">
+        Due in {diffDays} day{diffDays !== 1 ? 's' : ''}
+      </span>
+    );
+  }
+  
+  return null;
+}
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -578,32 +664,39 @@ console.log("appi",applications)
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard 
-            title="Total Applications" 
-            value={stats.total} 
-            icon={<FiFile className="h-6 w-6 text-blue-500" />}
-            color="bg-blue-100"
-          />
-          <StatCard 
-            title="Unassigned Applications" 
-            value={stats.unassigned} 
-            icon={<FiUser className="h-6 w-6 text-red-500" />}
-            color="bg-red-100"
-          />
-          <StatCard 
-            title="In Progress" 
-            value={stats.inProgress} 
-            icon={<FiClock className="h-6 w-6 text-yellow-500" />}
-            color="bg-yellow-100"
-          />
-          <StatCard 
-            title="Completed Applications" 
-            value={stats.completed} 
-            icon={<FiCheckCircle className="h-6 w-6 text-green-500" />}
-            color="bg-green-100"
-          />
-        </div>
+       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+  <StatCard 
+    title="Total Applications" 
+    value={stats.total} 
+    icon={<FiFile className="h-6 w-6 text-blue-500" />}
+    color="bg-blue-100"
+  />
+  <StatCard 
+    title="Unassigned" 
+    value={stats.unassigned} 
+    icon={<FiUser className="h-6 w-6 text-red-500" />}
+    color="bg-red-100"
+  />
+  <StatCard 
+    title="In Progress" 
+    value={stats.inProgress} 
+    icon={<FiClock className="h-6 w-6 text-yellow-500" />}
+    color="bg-yellow-100"
+  />
+  <StatCard 
+    title="Completed" 
+    value={stats.completed} 
+    icon={<FiCheckCircle className="h-6 w-6 text-green-500" />}
+    color="bg-green-100"
+  />
+  <StatCard 
+    title="Overdue" 
+    value={stats.overdue} 
+    icon={<FiClock className="h-6 w-6 text-red-500" />}
+    color="bg-red-100"
+  />
+</div>
+
 
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
@@ -642,7 +735,7 @@ console.log("appi",applications)
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th> */}
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
                     </tr>
@@ -666,9 +759,14 @@ console.log("appi",applications)
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(application.date).toLocaleDateString()}
+                              {new Date(application.date).toLocaleDateString('en-GB')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{application.delivery}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+  <div className="text-sm text-gray-500">
+    {application.delivery}
+  </div>
+  <DeliveryDateAlert deliveryDate={application.delivery} />
+</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {editingStatusId === application._id ? (
                                 <div className="flex flex-col space-y-2">
@@ -740,9 +838,9 @@ console.log("appi",applications)
                                 ? application.service.name || JSON.stringify(application.service) 
                                 : application.service}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               ₹{typeof application.amount === 'number' ? application.amount : 0}
-                            </td>
+                            </td> */}
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center space-x-2">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
@@ -844,46 +942,7 @@ console.log("appi",applications)
           </div>
         )}
 
-       {/* {isStatusHistoryModalOpen && selectedApplication && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Status History
-              </h3>
-              
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {selectedApplication.statusHistory && selectedApplication.statusHistory.length > 0 ? (
-                  [...selectedApplication.statusHistory].reverse().map((status, idx) => (
-                    <div key={idx} className="border-l-4 pl-3 py-2" style={{borderColor: status.hexcode || '#CBD5E0'}}>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-gray-900">{status.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(status.updatedAt).toLocaleString()}
-                        </span>
-                      </div>
-                      {status.reason && (
-                        <p className="text-sm text-gray-600 mt-1">Reason: {status.reason}</p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    No status history available
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setIsStatusHistoryModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )} */}
+
 
 {isStatusHistoryModalOpen && selectedApplication && (
   <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
@@ -1056,7 +1115,10 @@ console.log("appi",applications)
                              </div>
                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                                <h4 className="text-sm font-medium text-gray-500">Application Date</h4>
-                               <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.date}</p>
+                              <p className="mt-1 text-sm font-medium text-gray-900">
+  {new Date(selectedApplication.date).toLocaleDateString('en-GB')}
+</p>
+
                              </div>
                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                                <h4 className="text-sm font-medium text-gray-500">Service Type</h4>
@@ -1122,7 +1184,7 @@ console.log("appi",applications)
                            </div>
                            
                            {/* Remarks Section */}
-                           <div className="mb-6">
+                           {/* <div className="mb-6">
                              <h4 className="text-lg font-medium text-gray-700 mb-3">Application Remarks</h4>
                              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                                {selectedApplication.remark ? (
@@ -1147,7 +1209,7 @@ console.log("appi",applications)
                                  </div>
                                )}
                              </div>
-                           </div>
+                           </div> */}
                          </div>
                        </div>
                      </div>

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { FiFile,FiSave, FiPlus,FiPackage,FiChevronLeft ,FiChevronRight ,FiClock, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard, FiDownload, FiTrash2 } from 'react-icons/fi';
+import { useState, useEffect,useRef } from 'react';
+import { FiFile,FiSave, FiPlus,FiPackage,FiChevronLeft ,FiChevronDown,FiChevronUp ,FiChevronRight ,FiClock, FiSearch, FiRefreshCw, FiUpload, FiX, FiCheck, FiEye, FiCalendar, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCreditCard, FiDownload, FiTrash2 } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
 import axios from 'axios';
 export default function ServiceGroupsUI() {
@@ -20,7 +20,15 @@ export default function ServiceGroupsUI() {
   const [appLoading, setAppLoading] = useState(true);
    const [currentPage, setCurrentPage] = useState(1);
   const applicationsPerPage = 5;
+const [openGroups, setOpenGroups] = useState({});
 
+  // Toggle dropdown for a specific group
+  const toggleGroupDropdown = (groupId) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
 
    const indexOfLastApplication = currentPage * applicationsPerPage;
   const indexOfFirstApplication = indexOfLastApplication - applicationsPerPage;
@@ -563,7 +571,49 @@ const handleSaveChanges = async () => {
     alert("Failed to update application. Please try again.");
   }
 };
-
+// Update the handleFileUpload function in your main component
+const handleFileUpload = (documentType, file) => {
+  // Create a preview URL for the file
+  const fileUrl = URL.createObjectURL(file);
+  
+  if (documentType === 'receipt') {
+    setFormData(prev => ({
+      ...prev,
+      receipt: {
+        name: file.name,
+        file: file,
+        view: fileUrl
+      }
+    }));
+  } else {
+    // Check if this document type already exists
+    const existingDocIndex = formData.documents.findIndex(doc => doc.type === documentType);
+    
+    const newDoc = {
+      type: documentType,
+      name: file.name,
+      file: file,
+      view: fileUrl
+    };
+    
+    if (existingDocIndex >= 0) {
+      // Replace existing document
+      const updatedDocuments = [...formData.documents];
+      updatedDocuments[existingDocIndex] = newDoc;
+      setFormData(prev => ({
+        ...prev,
+        documents: updatedDocuments
+      }));
+    } else {
+      // Add new document
+      setFormData(prev => ({
+        ...prev,
+        documents: [...prev.documents, newDoc]
+      }));
+    }
+  }
+};
+console.log("formu - ",formData.documents)
 // Add a confirmation before closing if there are unsaved changes
 const handleCloseModal = () => {
   if (documentsModified) {
@@ -715,63 +765,48 @@ const handleCloseModal = () => {
   }
 
   // Component for document upload UI
-  const DocumentUploadField = ({ documentType, label }) => {
-    const isUploaded = isDocumentUploaded(documentType);
-    const document = getDocumentByType(documentType);
-    
-    return (
-      <div className="mb-3">
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <div className="mt-1">
-          {isUploaded ? (
-            <div className="flex items-center justify-between border border-green-300 rounded-md py-2 px-3 bg-green-50">
-              <div className="flex items-center truncate">
-                <FiFile className="flex-shrink-0 mr-2 text-green-500" />
-                <span className="text-sm text-green-700 truncate">{document.name}</span>
-              </div>
-              <div className="flex-shrink-0 flex">
-                {document.view && (
-                  <a
-                    href={document.view}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-600 hover:text-green-800 mx-1"
-                  >
-                    <FiEye />
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveDocument(documentType)}
-                  className="text-red-600 hover:text-red-800 mx-1"
-                >
-                  <FiTrash2 />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <label className="block w-full relative">
-              <span className="sr-only">Choose file</span>
-              <input 
-                type="file"
-                name={documentType}
-                onChange={(e) => handleFileChange(e, documentType,label)}
-                className="hidden"
-              />
-              <div className="flex items-center justify-between border border-gray-300 rounded-md py-2 px-3 text-sm cursor-pointer bg-white hover:bg-gray-50">
-                <div className="flex items-center">
-                  <FiFile className="mr-2 text-gray-400" />
-                  <span className="text-gray-500">Select {label.toLowerCase()}</span>
-                </div>
-                <FiUpload className="text-gray-400" />
-              </div>
-            </label>
-          )}
-        </div>
-      </div>
-    );
+ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
+  const [fileName, setFileName] = useState('');
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFileName(file.name);
+      onFileChange(documentType, file);
+    }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+      />
+      <div className="flex-grow min-w-0">
+        <div className="flex items-center justify-between w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+          <span className="truncate text-sm text-gray-600">
+            {fileName || `No file selected for ${label}`}
+          </span>
+          <button
+            type="button"
+            onClick={handleUploadClick}
+            className="ml-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            {fileName ? 'Change' : 'Upload'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
   // Loading state for the entire page
   if (loading) {
     return (
@@ -819,14 +854,7 @@ const handleCloseModal = () => {
           </div>
         </div>
 
-        {/* Applications Table */}
-        {appLoading ? (
-          <div className="bg-white shadow-sm rounded-lg p-8 mb-8 flex justify-center">
-            <FiRefreshCw className="animate-spin h-8 w-8 text-green-600" />
-          </div>
-        ) : (
-          <ApplicationsTable applications={applications} />
-        )}
+       
 
         {/* Service Groups Section */}
         <div className="mb-8">
@@ -848,307 +876,359 @@ const handleCloseModal = () => {
 
           {/* Service Groups Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServiceGroups.map((group) => (
-              <div 
-                key={group._id} 
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="h-40 bg-gray-200 relative overflow-hidden">
-                  {group.image ? (
-                    <img 
-                      src={group.image} 
-                      alt={group.name} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-                      <FiFileText className="h-12 w-12 text-green-400" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
-                    <h3 className="text-white text-xl font-semibold p-4">{group.name}</h3>
-                  </div>
-                </div>
-                
-                <div className="p-4">
-                  {group.services && group.services.length > 0 ? (
-                    <div className="space-y-3">
-                      {group.services.map((service) => (
-                        <div key={service._id} className="flex justify-between items-center p-2 rounded-md hover:bg-gray-50">
-                          <div>
-                            <p className="font-medium text-gray-800">{service.name}</p>
-                            {service.documentNames && service.documentNames.length > 0 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Requires: {service.documentNames.slice(0, 2).join(', ')}
-                                {service.documentNames.length > 2 && ' + ' + (service.documentNames.length - 2) + ' more'}
-                              </p>
-                            )}
-                          </div>
-                              <div className="relative">
-      <button
-        onClick={()=>handleButtonClick(group, service)}
-        disabled={loading}
-        className={`flex items-center text-sm px-3 py-1 rounded-md font-medium ${
-          loading 
-            ? "bg-gray-100 text-gray-400"
-            : "bg-green-50 hover:bg-green-100 text-green-700"
-        }`}
-      >
-        {loading ? (
-          "Loading..."
-        ) : (
-          <>
-            ₹{getPriceForAgentPlan(service)}
-            <FiPlus className="ml-2 h-4 w-4" />
-          </>
-        )}
-      </button>
-      
-      {error && (
-        <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
-          {error}
-        </div>
-      )}
-    </div>
+      {filteredServiceGroups.map((group) => (
+        <div
+          key={group._id}
+          className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+        >
+          <div className="h-40 bg-gray-200 relative overflow-hidden">
+            {group.image ? (
+              <img
+                src={group.image}
+                alt={group.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+                <FiFileText className="h-12 w-12 text-green-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+              <h3 className="text-white text-xl font-semibold p-4">{group.name}</h3>
+            </div>
+          </div>
 
-                        </div>
-                      ))}
-                    </div>
+          <div className="p-4">
+            {group.services && group.services.length > 0 ? (
+              <div>
+                <button
+                  onClick={() => toggleGroupDropdown(group._id)}
+                  className="w-full flex justify-between items-center py-2 px-3 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <span className="font-medium text-gray-700">
+                    View {group.services.length} available services
+                  </span>
+                  {openGroups[group._id] ? (
+                    <FiChevronUp className="h-5 w-5 text-gray-500" />
                   ) : (
-                    <p className="text-gray-500 text-center py-4">No services available yet</p>
+                    <FiChevronDown className="h-5 w-5 text-gray-500" />
                   )}
-                </div>
+                </button>
+
+                {openGroups[group._id] && (
+                  <div className="mt-3 space-y-3">
+                    {group.services.map((service) => (
+                      <div key={service._id} className="flex justify-between items-center p-2 rounded-md hover:bg-gray-50">
+                        <div>
+                          <p className="font-medium text-gray-800">{service.name}</p>
+                          {service.documentNames && service.documentNames.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Requires: {service.documentNames.slice(0, 2).join(', ')}
+                              {service.documentNames.length > 2 && ' + ' + (service.documentNames.length - 2) + ' more'}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="relative">
+                          <button
+                            onClick={() => handleButtonClick(group, service)}
+                            disabled={loading}
+                            className={`flex items-center text-sm px-3 py-1 rounded-md font-medium ${
+                              loading 
+                                ? "bg-gray-100 text-gray-400"
+                                : "bg-green-50 hover:bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {loading ? (
+                              "Loading..."
+                            ) : (
+                              <>
+                                ₹{getPriceForAgentPlan(service)}
+                                <FiPlus className="ml-2 h-4 w-4" />  
+                              </>
+                            )}
+                          </button>
+                          
+                          {error && (
+                            <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+                              {error}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-            
-            {filteredServiceGroups.length === 0 && (
-              <div className="col-span-1 md:col-span-3 bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
-                <FiSearch className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-600 mb-1">No service groups match your search</p>
-                <p className="text-gray-500 text-sm">Try a different search term or browse all services</p>
-              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-4">No services available yet</p>
             )}
           </div>
         </div>
+      ))}
+      
+      {filteredServiceGroups.length === 0 && (
+        <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+          <FiSearch className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-600 mb-1">No service groups match your search</p>
+          <p className="text-gray-500 text-sm">Try a different search term or browse all services</p>
+        </div>
+      )}
+    </div>
+        </div>
         
         {/* Application Form Modal */}
-        {isModalOpen && selectedService && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Apply for {selectedService.name}
-                </h3>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <FiX className="h-5 w-5" />
-                </button>
+     {isModalOpen && selectedService && (
+  <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl p-6 max-w-xl w-full mx-4 max-h-screen overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium text-gray-900">
+          Apply for {selectedService.name}
+        </h3>
+        <button 
+          onClick={() => setIsModalOpen(false)}
+          className="text-gray-400 hover:text-gray-500"
+        >
+          <FiX className="h-5 w-5" />
+        </button>
+      </div>
+      
+      <div className="flex items-center space-x-2 mb-4">
+        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
+          ₹{selectedService.price}
+        </span>
+        <span className="text-sm text-gray-600">
+          Service Group: {selectedService.groupName}
+        </span>
+      </div>
+      
+      {/* Required Documents */}
+      {selectedService.documentNames && selectedService.documentNames.length > 0 && (
+        <div className="mb-4 p-3 bg-yellow-50 rounded-md">
+          <p className="text-sm font-medium text-yellow-800">Required Documents:</p>
+          <ul className="list-disc list-inside text-sm text-yellow-700 mt-1">
+            {selectedService.documentNames.map((doc, index) => (
+              <li key={index}>{doc}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    
+      
+      {/* Form submission status */}
+      {submissionStatus && (
+        <div className={`mb-4 p-3 rounded ${submissionStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className="flex items-center">
+            {submissionStatus.success ? (
+              <FiCheck className="h-5 w-5 mr-2" />
+            ) : (
+              <FiX className="h-5 w-5 mr-2" />
+            )}
+            {submissionStatus.message}
+          </div>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Applicant Name*</label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiUser className="text-gray-400" />
               </div>
-              
-              <div className="flex items-center space-x-2 mb-4">
-                <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
-                  ₹{selectedService.price}
-                </span>
-                <span className="text-sm text-gray-600">
-                  Service Group: {selectedService.groupName}
-                </span>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Phone Number*</label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiPhone className="text-gray-400" />
               </div>
-              
-              {/* Required Documents */}
-              {selectedService.documentNames && selectedService.documentNames.length > 0 && (
-                <div className="mb-4 p-3 bg-yellow-50 rounded-md">
-                  <p className="text-sm font-medium text-yellow-800">Required Documents:</p>
-                  <ul className="list-disc list-inside text-sm text-yellow-700 mt-1">
-                    {selectedService.documentNames.map((doc, index) => (
-                      <li key={index}>{doc}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Form submission status */}
-              {submissionStatus && (
-                <div className={`mb-4 p-3 rounded ${submissionStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  <div className="flex items-center">
-                    {submissionStatus.success ? (
-                      <FiCheck className="h-5 w-5 mr-2" />
-                    ) : (
-                      <FiX className="h-5 w-5 mr-2" />
-                    )}
-                    {submissionStatus.message}
-                  </div>
-                </div>
-              )}
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Applicant Name*</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiUser className="text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone Number*</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiPhone className="text-gray-400" />
-                      </div>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        pattern="[0-9]{10}"
-                        title="Please enter a valid 10-digit phone number"
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Email Address*</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiMail className="text-gray-400" />
-                      </div>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-                    {
-                      selectedService.formData.map((data)=>{
-                        return<div key={data.label}>
-                          <label className="block text-sm font-medium text-gray-700">{data.label}*</label>
-                          <div className="mt-1 relative rounded-md shadow-sm">
-                          
-                          {/* <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FiMail className="text-gray-400" />
-                          </div> */}
-                         <input
-  type={data.inputType}
-  name="additional.value"
-  required
-  value={formData.additional.value || ''}
-  onChange={(e)=>handleInputChange(e,data.label)}
-  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-/>
-
-                        </div>
-                        </div> 
-                      })
-                    }
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Application Date</label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiCalendar className="text-gray-400" />
-                      </div>
-                      <input
-                        type="date"
-                        name="date"
-                        value={formData.date}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Address</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiMapPin className="text-gray-400" />
-                    </div>
-                    <textarea
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      rows={3}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
-                </div>
-               
-                
-                {/* Payment Details */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Payment Receipt</label>
-                    <span className="text-xs text-gray-500">Upload payment confirmation</span>
-                  </div>
-                  <div className="mt-1">
-                    <DocumentUploadField documentType="receipt" label="Payment Receipt" />
-                  </div>
-                </div>
-                
-                {/* Dynamic Document Upload Fields */}
-                {selectedService.documentNames && selectedService.documentNames.length > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Required Documents</label>
-                      <span className="text-xs text-gray-500">Upload all required documents</span>
-                    </div>
-                    <div className="space-y-3">
-                      {selectedService.documentNames.map((docName, index) => (
-                        <DocumentUploadField 
-                          key={index} 
-                          documentType={docName} 
-                          label={docName}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="pt-4 border-t border-gray-200 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={formLoading}
-                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {formLoading ? (
-                      <>
-                        <FiRefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit Application'
-                    )}
-                  </button>
-                </div>
-              </form>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                required
+                pattern="[0-9]{10}"
+                title="Please enter a valid 10-digit phone number"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email Address*</label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiMail className="text-gray-400" />
+              </div>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+          {
+            selectedService.formData.map((data)=>{
+              return<div key={data.label}>
+                <label className="block text-sm font-medium text-gray-700">{data.label}*</label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                <input
+                  type={data.inputType}
+                  name="additional.value"
+                  required
+                  value={formData.additional.value || ''}
+                  onChange={(e)=>handleInputChange(e,data.label)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              </div> 
+            })
+          }
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Application Date</label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiCalendar className="text-gray-400" />
+              </div>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Address</label>
+          <div className="mt-1 relative rounded-md shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiMapPin className="text-gray-400" />
+            </div>
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              rows={3}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+        </div>
+        
+        {/* Payment Details */}
+        {/* <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-700">Payment Receipt</label>
+            <span className="text-xs text-gray-500">Upload payment confirmation</span>
+          </div>
+          <div className="mt-1">
+            <DocumentUploadField 
+              documentType="receipt" 
+              label="Payment Receipt" 
+              onFileChange={handleFileUpload}
+            />
+          </div>
+        </div>
+        {formData.receipt && (
+  <div className="mt-2">
+    <h4 className="text-sm font-medium text-gray-700 mb-1">Uploaded Receipt:</h4>
+    <div className="flex items-center justify-start gap-2 bg-gray-50 p-2 rounded">
+    <span>Payment Receipt</span>-<span className="text-sm text-gray-600">{formData.receipt.name}</span>
+      <button
+        type="button"
+        onClick={() => handleRemoveDocument('receipt')}
+        className="text-red-500 hover:text-red-700"
+      >
+        <FiX />
+      </button>
+    </div>
+  </div>
+)} */}
+        
+        {/* Dynamic Document Upload Fields */}
+        {selectedService.documentNames && selectedService.documentNames.length > 0 && (
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Required Documents</label>
+              <span className="text-xs text-gray-500">Upload all required documents</span>
+            </div>
+            <div className="space-y-3">
+              {selectedService.documentNames.map((docName, index) => (
+                <DocumentUploadField 
+                  key={index} 
+                  documentType={docName} 
+                  label={docName}
+                  onFileChange={handleFileUpload}
+                />
+              ))}
             </div>
           </div>
         )}
+          {formData.documents.length > 0 && (
+  <div className="mt-4">
+    <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Documents:</h4>
+    <ul className="space-y-2">
+      {formData.documents.map((doc, index) => (
+        <li key={index} className="flex items-center justify-start gap-2 bg-gray-50 p-2 rounded">
+          <span>{doc.type}</span>-<span className="text-sm text-gray-600">{doc.name}</span>
+          <button
+            type="button"
+            onClick={() => handleRemoveDocument(doc.type)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <FiX />
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+        
+        <div className="pt-4 border-t border-gray-200 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(false)}
+            className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={formLoading}
+            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {formLoading ? (
+              <>
+                <FiRefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                Submitting...
+              </>
+            ) : (
+              'Submit Application'
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
         
         {/* View Application Modal */}
         {isViewModalOpen && selectedApplication && (

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
+  FileCheck2,
   ChevronLeft,
   ChevronRight,
   X
@@ -301,6 +302,11 @@ const AgentSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
             label="Dashboard" 
             href="/agent"
           />
+          <SidebarItem 
+            icon={FileCheck2} 
+            label="Application Tracking" 
+            href="/agent/applications"
+          />
         </motion.nav>
 
         {/* Footer */}
@@ -368,6 +374,11 @@ const AgentSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                   icon={Home}
                   label="Dashboard"
                   href="/agent"
+                />
+                <MobileSidebarItem
+                   icon={FileCheck2} 
+            label="Application Tracking" 
+            href="/agent/applications"
                 />
               </nav>
 

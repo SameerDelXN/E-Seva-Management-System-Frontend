@@ -322,6 +322,11 @@ const StaffSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
             label="Dashboard" 
             href="/staff"
           />
+          <SidebarItem 
+            icon={Home} 
+            label="Due Applications" 
+            href="/staff/due-applications"
+          />
           
           {/* Applications Management */}
        
@@ -434,6 +439,11 @@ const StaffSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                     icon={Home} 
                     label="Dashboard" 
                     href="/staff"
+                  />
+                  <MobileSidebarItem 
+                    icon={Home} 
+                    label="Due Applications" 
+                    href="/staff/due-applications"
                   />
                   
                   {/* Applications Management */}

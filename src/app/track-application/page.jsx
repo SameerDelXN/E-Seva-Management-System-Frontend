@@ -683,6 +683,7 @@ export default function TrackApplication() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-800 truncate">{doc.name || `Document ${idx + 1}`}</p>
+                              {doc.remark ? <p className="text-sm font-medium text-red-500 truncate">remark : {doc.remark}</p> : null}
                               <p className="text-xs text-gray-500">{doc.type || 'Document'}</p>
                             </div>
                           </div>

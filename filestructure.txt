@@ -43,6 +43,8 @@
                 |-- page.jsx
             |-- demo-service
                 |-- page.jsx
+            |-- due-applications
+                |-- page.jsx
             |-- filter-data
                 |-- page.jsx
             |-- layout.jsx
@@ -71,6 +73,8 @@
             |-- view-bill
                 |-- page.jsx
         |-- agent
+            |-- applications
+                |-- page.jsx
             |-- layout.jsx
             |-- page.jsx
         |-- api
@@ -106,6 +110,8 @@
             |-- page.jsx
         |-- staff
             |-- applications
+                |-- page.jsx
+            |-- due-applications
                 |-- page.jsx
             |-- layout.jsx
             |-- page.jsx
