@@ -49,7 +49,7 @@ export default function StaffManagerDashboard() {
     const [currentRemark, setCurrentRemark] = useState("");
     const [selectedApplicationId, setSelectedApplicationId] = useState(null);
 
-  const API_BASE_URL = " https://dokument-guru-backend.vercel.app/api/application";
+  const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
   // Stats counters for dashboard
@@ -238,6 +238,14 @@ console.log("appi",applications)
     // Prepare the update payload
     const updatePayload = {
       ...selectedApplication,
+      initialStatus:[
+        {
+          name: "Objection",
+      hexcode:"#9C27B0",
+      askreason: true,
+      reason:"remark added",
+        }
+      ],
       document: updatedDocuments,
       remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
     };
@@ -678,7 +686,7 @@ console.log("appi",applications)
                                       onChange={handleStatusChange}
                                       className="text-xs border border-gray-300 rounded p-1"
                                     >
-                                      {combinedStatusOptions.map(option => (
+                                      {combinedStatusOptions.sort((a, b) => a.priority - b.priority).map(option => (
                                         <option key={option.name} value={option.name}>
                                           {option.name}
                                         </option>

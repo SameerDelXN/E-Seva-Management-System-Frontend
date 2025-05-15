@@ -66,15 +66,40 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
     availablity: "subscription",
     price: 0,
     planPrices: [],
-    status: [
-      {
-                name: "Active",
-                hexcode: "#4CAF50",
-                askreason: false,
-                 priority: 1
-                
-              }
-    ]
+    status:
+    [
+  {
+    name: "Initiated",
+    hexcode: "#2196F3", // Blue - information/start
+    askreason: false,
+    priority: 1
+  },
+  {
+    name: "Inprocess",
+    hexcode: "#FFC107", // Amber - processing/waiting
+    askreason: false,
+    priority: 2
+  },
+  {
+    name: "Rejected",
+    hexcode: "#F44336", // Red - rejection/error
+    askreason: true,
+    priority: 3
+  },
+  {
+    name: "Completed",
+    hexcode: "#4CAF50", // Green - success/completed
+    askreason: false,
+    priority: 4
+  },
+  {
+    name: "Objection",
+    hexcode: "#9C27B0", // Purple - requires attention/objection
+    askreason: true,
+    priority: 5
+  }
+]
+
     
   });
 const [locations,setLocations]=useState(null);
@@ -464,7 +489,39 @@ const App = () => {
                   planName:p.planName,
                   price: serviceData.price
                 }))
-              : []
+              : [
+  {
+    name: "Initiated",
+    hexcode: "#2196F3", // Blue - information/start
+    askreason: false,
+    priority: 1
+  },
+  {
+    name: "Inprocess",
+    hexcode: "#FFC107", // Amber - processing/waiting
+    askreason: false,
+    priority: 2
+  },
+  {
+    name: "Rejected",
+    hexcode: "#F44336", // Red - rejection/error
+    askreason: true,
+    priority: 3
+  },
+  {
+    name: "Completed",
+    hexcode: "#4CAF50", // Green - success/completed
+    askreason: false,
+    priority: 4
+  },
+  {
+    name: "Objection",
+    hexcode: "#9C27B0", // Purple - requires attention/objection
+    askreason: true,
+    priority: 5
+  }
+]
+
           }))
         : [],
       status: serviceData.status && Array.isArray(serviceData.status)
@@ -474,7 +531,9 @@ const App = () => {
             askreason: s.askreason,
             priority:s.priority
           }))
-        : []
+        : [
+          
+        ]
     };
     
     console.log("Cleaned data for API:", cleanedData);

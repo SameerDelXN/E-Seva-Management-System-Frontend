@@ -32,7 +32,10 @@ const ServiceModal = ({
   const [plans, setPlans] = useState([]);
   const [newplan, selectnewplan] = useState([]);
   const [activeSection, setActiveSection] = useState('services');
-  const [loading,setLoading] = useState(false)
+  const [loading,setLoading] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState(null);
+const [tempPrice, setTempPrice] = useState('');
+  
   const [statuses, setStatuses] = useState(service?.status || [
     { id: 1, status: 'OFFICE VR CARD ALE AHE', color: '#32a852', askReason: false },
     { id: 2, status: 'E PAN GENERATED', color: '#b3f542', askReason: false },
@@ -83,8 +86,114 @@ const ServiceModal = ({
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+const handleEditPrice = (planId, currentPrice) => {
+  setEditingPriceId(planId);
+  // console.log("this is id",planId)
+  setTempPrice(currentPrice);
+};
 
-  const handleDocChange = (index, value) => {
+const handlePriceChange = (e) => {
+  setTempPrice(e.target.value);
+};
+
+// const handleSavePrice = async (planId) => {
+//   try {
+//     // Update the price in your state
+//     const updatedPlans = newplan.map(plan => 
+//       plan.plan_id === planId ? { ...plan, price: tempPrice } : plan
+//     );
+    
+//     // Update the local state first for immediate UI feedback
+//     selectnewplan(updatedPlans);
+    
+//     // Call your API to update the price in the backend
+//     const response = await fetch(`YOUR_API_ENDPOINT_TO_UPDATE_PRICE`, {
+//       method: 'PATCH',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         planId,
+//         newPrice: tempPrice
+//       }),
+//     });
+
+//     if (!response.ok) {
+//       throw new Error('Failed to update price');
+//     }
+
+//     // Reset editing state
+//     setEditingPriceId(null);
+//     setTempPrice('');
+    
+//     // Optionally show success message
+//     console.log('Price updated successfully');
+    
+//   } catch (error) {
+//     console.error('Error updating price:', error);
+//     // Optionally show error message and revert local state
+//   }
+// };
+  
+
+const handleSavePrice = async (planId) => {
+    try {
+      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-plan-price/${formData.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          district: selectedPlan.name,
+          state: selectedPlan.state,
+          planId: planId,
+          newPrice: tempPrice
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update price');
+      }
+
+      const data = await response.json();
+      
+      // Update the local state with the new price
+      const updatedPlans = newplan.map(plan => 
+        plan._id === planId ? { ...plan, price: tempPrice } : plan
+      );
+      
+      selectnewplan(updatedPlans);
+      
+      // Also update the locations state if needed
+      const updatedLocations = locations.map(location => {
+        if (location.district === selectedPlan.name && location.state === selectedPlan.state) {
+          return {
+            ...location,
+            plans: location.plans.map(plan => 
+              plan._id === planId ? { ...plan, price: tempPrice } : plan
+            )
+          };
+        }
+        return location;
+      });
+      
+      setLocations(updatedLocations);
+      
+      // Reset editing state
+      setEditingPriceId(null);
+      setTempPrice('');
+      
+      // Show success message
+      console.log('Price updated successfully');
+      
+    } catch (error) {
+      console.error('Error updating price:', error);
+      // Optionally show error message to user
+    }
+  };
+
+
+const handleDocChange = (index, value) => {
     const newDocs = [...formData.documents];
     newDocs[index] = value;
     setFormData(prev => ({ ...prev, documents: newDocs }));
@@ -158,65 +267,128 @@ const ServiceModal = ({
     // Any additional save logic can go here
   };
 
-  const handleAddStatus = async() => {
-    setLoading(true)
-    console.log("id is ", formData.id);
-    // if (newStatus.status.trim() === '') return;
+  // const handleAddStatus = async() => {
+  //   setLoading(true)
+  //   console.log("id is ", formData.id);
+  //   // if (newStatus.status.trim() === '') return;
     
-    if (editingStatus) {
-      // Update existing status
-      setStatuses(statuses.map(status => 
-        status._id === editingStatus.id 
-          ? { ...newStatus, id: status.id }
-          : status
-      ));
-      setEditingStatus(null);
-    } else {
-      console.log("asdfaef this", newStatus);
-      try {
-        const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ newStatus })
-        });
+  //   if (editingStatus) {
+  //     // Update existing status
+  //     setStatuses(statuses.map(status => 
+  //       status._id === editingStatus.id 
+  //         ? { ...newStatus, id: status.id }
+  //         : status
+  //     ));
+  //     setEditingStatus(null);
+  //   } else {
+  //     console.log("asdfaef this", newStatus);
+  //     try {
+  //       const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`, {
+  //         method: "PATCH",
+  //         headers: {
+  //           "Content-Type": "application/json"
+  //         },
+  //         body: JSON.stringify({ newStatus })
+  //       });
     
-        const result = await response.json();
+  //       const result = await response.json();
     
-        if (response.ok) {
-          setLoading(false)
-          onClose()
-          console.log("✅ Status added:", result);
-          fetchServices();
-          // Optional: Update local state or show success message
-        } else {
-          console.error("❌ Error:", result.message);
-          // Optional: Show error message
-        }
-      } catch (error) {
-        console.error("❌ Exception:", error);
-      }
-    }
+  //       if (response.ok) {
+  //         setLoading(false)
+  //         onClose()
+  //         console.log("✅ Status added:", result);
+  //         fetchServices();
+  //         // Optional: Update local state or show success message
+  //       } else {
+  //         console.error("❌ Error:", result.message);
+  //         // Optional: Show error message
+  //       }
+  //     } catch (error) {
+  //       console.error("❌ Exception:", error);
+  //     }
+  //   }
     
-    setNewStatus({
-      status: '',
-      color: '#32a852',
-      askReason: false,
-       priority: 0
-    });
-    setIsAdding(false);
+  //   setNewStatus({
+  //     status: '',
+  //     color: '#32a852',
+  //     askReason: false,
+  //      priority: 0
+  //   });
+  //   setIsAdding(false);
+  // };
+
+  // const handleEditStatus = (status) => {
+  //   setEditingStatus(status);
+  //   setNewStatus({
+  //     name: status.status,
+  //     hexcode: status.color,
+  //     askReason: status.askReason
+  //   });
+  //   setIsAdding(true);
+  // };
+  
+  
+  const handleAddStatus = async () => {
+  setLoading(true);
+  
+  // Prepare the status data
+  const statusData = {
+    status: newStatus.name,
+    color: newStatus.hexcode,
+    askReason: newStatus.askReason,
+    priority: newStatus.priority
   };
 
-  const handleEditStatus = (status) => {
-    setEditingStatus(status);
-    setNewStatus({
-      name: status.status,
-      hexcode: status.color,
-      askReason: status.askReason
+  try {
+    const url = editingStatus 
+      ? ` https://dokument-guru-backend.vercel.app/api/admin/newService/update-status/${formData.id}/${editingStatus._id || editingStatus.id}`
+      : `https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`;
+
+    const method = editingStatus ? "PATCH" : "PATCH";
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(editingStatus ? statusData : { newStatus: statusData })
     });
-    setIsAdding(true);
-  };
+
+    const result = await response.json();
+
+    if (response.ok) {
+      setLoading(false);
+      fetchServices(); // Refresh the services list
+      setIsAdding(false);
+      setEditingStatus(null);
+      setNewStatus({
+        name: '',
+        hexcode: '#32a852',
+        askReason: false,
+        priority: 0
+      });
+    } else {
+      console.error("Error:", result.message);
+      // Show error message to user
+    }
+  } catch (error) {
+    console.error("Exception:", error);
+    setLoading(false);
+  }
+};
+
+  const handleEditStatus = (status) => {
+      console.log("sdf",status);
+  setEditingStatus(status);
+
+  setNewStatus({
+    name: status.status || status.name, // Some statuses use 'status' key, others use 'name'
+    hexcode: status.color || status.hexcode,
+    askReason: status.askReason || status.askreason, // Check both possible keys
+    priority: status.priority || 0
+  });
+  setIsAdding(true);
+};
 
   const handleNoteChange = (e) => {
     setFormData(prev => ({
@@ -384,7 +556,7 @@ const ServiceModal = ({
           </div>
         </div>
       )} */}
-      {isAdding && (
+      {/* {isAdding && (
   <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
     <h3 className="font-medium mb-4 text-lg text-gray-700">
       {editingStatus ? 'Edit Status' : 'Add New Status'}
@@ -466,8 +638,90 @@ const ServiceModal = ({
       </button>
     </div>
   </div>
+)} */}
+{isAdding && (
+  <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
+    <h3 className="font-medium mb-4 text-lg text-gray-700">
+      {editingStatus ? 'Edit Status' : 'Add New Status'}
+    </h3>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Status Name</label>
+        <input
+          type="text"
+          value={newStatus.name}
+          onChange={(e) => setNewStatus({...newStatus, name: e.target.value})}
+          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter status name"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Color Code</label>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={newStatus.hexcode}
+            onChange={(e) => setNewStatus({...newStatus, hexcode: e.target.value})}
+            className="w-12 h-12 border border-gray-300 rounded-lg cursor-pointer"
+          />
+          <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{newStatus.hexcode}</span>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Ask Reason</label>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={newStatus.askReason}
+              onChange={() => setNewStatus({...newStatus, askReason: !newStatus.askReason})}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label className="ml-2 text-sm text-gray-700">
+              Require reason for this status
+            </label>
+          </div>
+        </div>
+      </div>
+      <div className="col-span-3 md:col-span-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+        <input
+          type="number"
+          value={newStatus.priority}
+          onChange={(e) => setNewStatus({...newStatus, priority: Number(e.target.value)})}
+          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Enter priority"
+        />
+      </div>
+    </div>
+    <div className="flex justify-end gap-3 mt-6">
+      <button
+        type="button"
+        onClick={() => {
+          setIsAdding(false);
+          setEditingStatus(null);
+          setNewStatus({
+            name: '',
+            hexcode: '#32a852',
+            askReason: false,
+            priority: 0
+          });
+        }}
+        className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm transition duration-200 hover:bg-gray-300 shadow-sm"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={handleAddStatus}
+        className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"
+      >
+        <Check className="w-4 h-4" />
+        {editingStatus ? 'Save Changes' : 'Add Status'}
+      </button>
+    </div>
+  </div>
 )}
-
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="min-w-full bg-white divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -969,222 +1223,335 @@ const ServiceModal = ({
 ) : activeSection === 'preview' ? (
   renderPreview()
 ) : activeSection === 'with-subscription' ? (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">Manage Prices</h2>
-    
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <h3 className="font-medium text-gray-700 mb-4">Available Plans</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {locations?.map((location, index) => (
-          <div 
-            key={index}
-            onClick={() => handleAvailablePlansClick(location)}
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              selectedPlan?.location === location.location
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-blue-300'
-            }`}
-          >
-            <h4 className="font-medium text-gray-800">{location.location}</h4>
-            <p className="text-sm text-gray-500 mt-1">
-              {location.plans.length} plans available
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {selectedPlan && (
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-medium text-gray-700">
-            Plans for {selectedPlan.location}
-          </h3>
-          <button
-            onClick={() => setShowUpdateSection(!showUpdateSection)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm flex items-center gap-2"
-          >
-            {showUpdateSection ? 'Hide' : 'Add New Plan'}
-          </button>
-        </div>
-
-        {showUpdateSection && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
-            <h4 className="font-medium text-gray-700 mb-3">Add/Update Plan</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter plan name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter price"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (months)</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter duration"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg">
-                Cancel
-              </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                Save Plan
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {selectedPlan.plans.map((plan, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {plan.plan}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ₹{plan.price}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {plan.duration} months
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleAddPricesClick(plan)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                      <button className="text-red-600 hover:text-red-800">
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )}
-
-    {/* Save Changes Button */}
-    <div className="mt-6 flex justify-end">
-      <button
-        onClick={handleSubmit}
-        disabled={isSaving}
-        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm transition duration-200 hover:bg-blue-700 shadow-md hover:shadow-lg flex items-center gap-2"
-      >
-        {isSaving ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Saving...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4" />
-            Save Changes
-          </>
-        )}
-      </button>
-    </div>
-  </div>
-) : activeSection === 'without-subscription' && (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-6">Prices without Subscription</h2>
-    
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <h3 className="font-medium text-gray-700 mb-4">
-        Plans for {selectedPlanPrices?.plan}
-      </h3>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {newplan?.prices?.map((price, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {price.location}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ₹{price.price}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-800">
-                      Edit
-                    </button>
-                    <button className="text-red-600 hover:text-red-800">
-                      Delete
+            <div className="space-y-6">
+              <div className="mt-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <h3 className="text-lg font-semibold">Appointment Price:</h3>
+                  <div className="flex items-center">
+                    <span className="text-gray-600 text-lg mr-2">₹</span>
+                    <input
+                      type="number"
+                      className="w-32 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="300.00"
+                      value={formData.price}
+                      onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    />
+                    <button 
+                      onClick={handleSubmit}
+                      className="ml-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Update
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                </div>
 
-    {/* Save Changes Button */}
-    <div className="mt-6 flex justify-end">
-      <button
-        onClick={handleSubmit}
-        disabled={isSaving}
-        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm transition duration-200 hover:bg-blue-700 shadow-md hover:shadow-lg flex items-center gap-2"
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold mb-4">Prices with Subscription</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      {/* <tbody className="divide-y divide-gray-200">
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Pune</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Maharashtra</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <button 
+                              onClick={() => handleAvailablePlansClick({
+                                id: 1,
+                                name: 'Pune',
+                                state: 'Maharashtra'
+                              })}
+                              className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Available Plans
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Beed</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Maharashtra</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <button 
+                              onClick={() => handleAvailablePlansClick({
+                                id: 2,
+                                name: 'Beed',
+                                state: 'Maharashtra'
+                              })}
+                              className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Available Plans
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody> */}
+
+{/* <tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
+    <tr key={item._id}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location?.district}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.location?.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button
+          onClick={() => handleAvailablePlansClick({
+            id: item._id,
+            name: item.location?.district,
+            state: item.location?.state,
+            plans: item.plans // send plans if needed
+          })}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+        >
+          Available Plans
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody> */}
+
+<tbody className="divide-y divide-gray-200">
+  {locations.map((item, index) => (
+    <tr key={item._id}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.district}</td> 
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button
+          onClick={() => handleAvailablePlansClick({
+            id: item._id,
+            name: item.district,
+            state: item.state,
+            plans: item.plans
+          })}
+          className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+        >
+          Available Plans
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ): activeSection === 'without-subscription' ? (
+            <div className="space-y-6">
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">
+                    Prices without Subscription {selectedPlan && `- ${selectedPlan.name}, ${selectedPlan.state}`}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setActiveSection('with-subscription');
+                      setSelectedPlan(null);
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Back
+                  </button>
+                </div>
+                
+                <div className="mt-8">
+                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th>
+                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Price</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    {/* <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Amol Awari</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 1,
+                              name: 'Amol Awari',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 2,
+                              name: 'Driving School',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">maha e seva monthly Suscription</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 3,
+                              name: 'maha e seva monthly Suscription',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">4</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dokument Guru Gold</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 4,
+                              name: 'Dokument Guru Gold',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">5</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School Pro</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <button 
+                            onClick={() => handleAddPricesClick({
+                              id: 5,
+                              name: 'Driving School Pro',
+                              govtPrice: '107.00',
+                              commissionPrice: '43.00',
+                              taxPercentage: '0.00',
+                              tatkalGovtPrice: '107.00',
+                              tatkalCommissionPrice: '43.00',
+                              tatkalTaxPercentage: '0.00'
+                            })}
+                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                          >
+                            Add Prices
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody> */}
+
+<tbody className="divide-y divide-gray-200">
+  {newplan?.map((planItem, index) => (
+    <tr key={index}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{planItem.planName}</td>
+         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 pl-12">
+  {editingPriceId === planItem._id ? (
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        value={tempPrice}
+        onChange={handlePriceChange}
+        className="w-24 p-1 border border-gray-300 rounded"
+      />
+      <button 
+        onClick={() => handleSavePrice(planItem._id)}
+        className="px-2 py-1 bg-green-500 text-white rounded text-xs"
       >
-        {isSaving ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Saving...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4" />
-            Save Changes
-          </>
-        )}
+        Save
+      </button>
+      <button 
+        onClick={() => {
+          setEditingPriceId(null);
+          setTempPrice('');
+        }}
+        className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+      >
+        Cancel
       </button>
     </div>
-  </div>
-)}
+  ) : (
+    <div className="flex items-center gap-2">
+      ₹ {planItem.price}
+      {/* <button 
+        onClick={() => handleEditPrice(planItem._id, planItem.price)}
+        className="ml-2 text-blue-500 hover:text-blue-700"
+        title="Edit price"
+      >
+        <Pencil className="w-4 h-4" />
+      </button> */}
+    </div>
+  )}
+</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <button 
+          onClick={() => handleEditPrice(planItem._id, planItem.price)}
+          // onClick={() =>
+          //    handleAddPricesClick({
+          //   id: planItem.plan_id,
+          //   name: planItem.planName,
+          //   govtPrice: planItem.price,
+          //   commissionPrice: '43.00',
+          //   taxPercentage: '0.00',
+          //   tatkalGovtPrice: planItem.price,
+          //   tatkalCommissionPrice: '43.00',
+          //   tatkalTaxPercentage: '0.00'
+          // })}
+          className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+        >
+          Update Price
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
