@@ -545,7 +545,7 @@ const App = () => {
     console.log("Cleaned data for API:", cleanedData);
     
     try {
-      const res = await fetch('http://localhost:3001/api/admin/newService/addService', {
+      const res = await fetch('https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -143,7 +143,7 @@ const handlePriceChange = (e) => {
 
 const handleSavePrice = async (planId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/newService/update-plan-price/${formData.id}`, {
+      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-plan-price/${formData.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -347,7 +347,7 @@ const handleDocChange = (index, value) => {
   try {
     const url = editingStatus 
       ? ` https://dokument-guru-backend.vercel.app/api/admin/newService/update-status/${formData.id}/${editingStatus._id || editingStatus.id}`
-      : `http://localhost:3001/api/admin/newService/update-service/${formData.id}`;
+      : `https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`;
 
     const method = editingStatus ? "PATCH" : "PATCH";
 
@@ -423,7 +423,7 @@ const handleDocChange = (index, value) => {
     console.log("Saving data:", formData);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/newService/update-namedoc/${formData.id}`, {
+      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
