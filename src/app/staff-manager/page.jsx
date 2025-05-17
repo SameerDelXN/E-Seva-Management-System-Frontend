@@ -1,9 +1,11 @@
 "use client";
 
 import { useSession } from '@/context/SessionContext';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { FiRefreshCw, FiFile,FiDownload , FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiEye, FiPlus } from 'react-icons/fi';
-
+import { FiRefreshCw, FiFile,FiDownload ,FiUpload ,FiTrash2 ,FiCheckCircle, FiClock, FiUser, FiEdit2, FiEdit, FiSave, FiX, FiList, FiMessageSquare, FiEye, FiPlus } from 'react-icons/fi';
+import { uploadFile } from '@/utils/uploadFile';
+import axios from 'axios';
 export default function StaffManagerDashboard() {
   const {session} = useSession()
   const [applications, setApplications] = useState([]);
@@ -41,6 +43,19 @@ export default function StaffManagerDashboard() {
       const [selectedDocument, setSelectedDocument] = useState(null);
       const [documentRemarks, setDocumentRemarks] = useState([]);
       const [newDocumentRemark, setNewDocumentRemark] = useState("");
+      const [formData, setFormData] = useState({
+     
+          // Changed from a single document to an array of documents
+          documents: [],
+         
+        });
+      const [filters, setFilters] = useState({
+  name: '',
+  provider: '',
+  service: '',
+  dateFrom: '',
+  dateTo: ''
+});
   // Add state for remarks
     const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name);
   const [isRemarkModalOpen, setIsRemarkModalOpen] = useState(false);
@@ -48,7 +63,10 @@ export default function StaffManagerDashboard() {
   const [newRemarkText, setNewRemarkText] = useState("");
     const [currentRemark, setCurrentRemark] = useState("");
     const [selectedApplicationId, setSelectedApplicationId] = useState(null);
-
+    
+    const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+    const [tempDeliveryDate, setTempDeliveryDate] = useState("");
+  
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const STAFF_API_URL = "https://dokument-guru-backend.vercel.app/api/admin/staff/fetch-all-staff";
 
@@ -61,6 +79,47 @@ export default function StaffManagerDashboard() {
   });
   console.log("sess = ",session)
   // Fetch all applications
+    const formatDatee = (dateString) => {
+  const [year, month, day] = dateString.split("-");
+  return `${day}/${month}/${year}`;
+};
+   const startEditDeliveryDate = (application) => {
+  setTempDeliveryDate(application.delivery || "");
+  setEditingDeliveryDate(true);
+};
+
+const saveDeliveryDate = async (applicationId) => {
+  console.log(tempDeliveryDate)
+  try {
+    const response = await fetch(`${API_BASE_URL}/update/${applicationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ delivery: formatDatee(tempDeliveryDate )}),
+    });
+    console.log(response)
+    if (!response.ok) throw new Error('Failed to update delivery date');
+
+    const updatedApplication = await response.json();
+    
+    setApplications(applications.map(app => 
+      app._id === applicationId ? updatedApplication : app
+    ));
+    
+    setEditingDeliveryDate(false);
+    setShowViewModal(false)
+    fetchApplications(); // Refresh the data
+    
+  } catch (err) {
+    console.error("Error updating delivery date:", err);
+    alert("Failed to update delivery date. Please try again.");
+  }
+};
+
+const cancelEditDeliveryDate = () => {
+  setEditingDeliveryDate(false);
+};
   const fetchApplications = async () => {
   try {
     setLoading(true);
@@ -108,6 +167,8 @@ export default function StaffManagerDashboard() {
   return deliveryDate < today;
 }).length;
 
+ // Extract unique provider names
+
 
     // Count applications due within 3 days
     const dueSoonApps = data.filter(app => {
@@ -137,6 +198,22 @@ export default function StaffManagerDashboard() {
 };
 console.log("appi",applications)
   // Fetch all staff members
+  const uniqueProviders = [
+  ...new Set(
+    applications
+      .map(app => app.provider?.[0]?.name)
+      .filter(Boolean)
+  )
+];
+
+// Extract unique service names
+const uniqueServices = [
+  ...new Set(
+    applications
+      .map(app => typeof app.service === 'object' ? app.service?.name : app.service)
+      .filter(Boolean)
+  )
+];
   const fetchStaffMembers = async () => {
     try {
       setStaffLoading(true);
@@ -194,6 +271,39 @@ console.log("appi",applications)
 
     return filtered.length > 0 ? filtered : staffMembers;
   };
+  const filterApplications = () => {
+  return applications.filter(app => {
+    // Name filter (case insensitive partial match)
+    if (filters.name && !app.name.toLowerCase().includes(filters.name.toLowerCase())) {
+      return false;
+    }
+    
+    // Provider filter
+    if (filters.provider && app.provider[0]?.name !== filters.provider) {
+      return false;
+    }
+    
+    // Service filter
+    if (filters.service) {
+      const serviceName = typeof app.service === 'object' ? app.service.name : app.service;
+      if (serviceName !== filters.service) {
+        return false;
+      }
+    }
+    
+    // Date range filter
+    if (filters.dateFrom || filters.dateTo) {
+      const appDate = new Date(app.date);
+      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
+      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
+      
+      if (fromDate && appDate < fromDate) return false;
+      if (toDate && appDate > toDate) return false;
+    }
+    
+    return true;
+  });
+};
 
   // Update application status
   const updateStatus = async (id, newStatus, reason = "") => {
@@ -520,7 +630,52 @@ console.log("appi",applications)
       alert("Failed to add remark. Please try again.");
     }
   };
+  const handleFileChange = async (id, type, fileData) => {
+  try {
+    let updateData;
+    
+    if (type === 'document') {
+      // For documents - add to array while preserving existing documents
+      const currentApp = applications.find(app => app._id === id);
+      const currentDocuments = currentApp?.document || [];
+      
+      updateData = { 
+        document: [...currentDocuments, fileData] 
+      };
+    } else {
+      // For receipts - set or clear the value
+      updateData = { 
+        receipt: fileData ? [fileData.view] : [] 
+      };
+    }
 
+    const response = await fetch(`${API_BASE_URL}/update/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) throw new Error('Failed to update file reference');
+
+    const updatedApplication = await response.json();
+    
+    setApplications(applications.map(app => 
+      app._id === id ? updatedApplication : app
+    ));
+    
+    fetchApplications();
+    
+    if (fileData) {
+      alert(`${type === 'document' ? 'Document' : 'Receipt'} ${fileData.view ? 'uploaded' : 'removed'} successfully!`);
+    }
+    
+  } catch (err) {
+    console.error(`Error updating ${type}:`, err);
+    alert(`Failed to update ${type}. Please try again.`);
+  }
+};
   const handleAddRemark = (application) => {
     setSelectedApplication(application);
     setNewRemarkText("");
@@ -560,7 +715,141 @@ console.log("appi",applications)
     setDocRemarks(detailsApplication?.docRemarks?.[docKey] || []);
     setIsDocRemarkModalOpen(true);
   };
+  const handleFileUpload = async (documentType, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(
+        'https://dokument-guru-backend.vercel.app/api/upload/doc',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      console.log(response)
+      if (response.data.success) {
+        const newDoc = {
+          type: documentType,
+          name: documentType,
+          view: response.data.documentUrl,
+          remark: ''
+        };
+  
+        // Check if this document type already exists
+        const existingDocIndex = formData?.documents?.findIndex(doc => doc.type === documentType);
+        
+        if (existingDocIndex >= 0) {
+          // Replace existing document
+          const updatedDocuments = [...formData.documents];
+          updatedDocuments[existingDocIndex] = newDoc;
+          setFormData(prev => ({
+            ...prev,
+            documents: updatedDocuments
+          }));
+        } else {
+          // Add new document
+          setFormData(prev => ({
+            ...prev,
+            documents: [...prev.documents, newDoc]
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      alert("Failed to upload document. Please try again.");
+    }
+  };
+  function FileUploadButton({ application,id, type, onChange, file, status }) {
+  const [uploading, setUploading] = useState(false);
+   const MAX_FILE_SIZE = 256 * 1024 ; // 5MB in bytes (increased from 256KB)
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+     if (selectedFile.size > MAX_FILE_SIZE) {
+      alert(`File size exceeds 256kb limit. Your file is ${Math.round(selectedFile.size / 1024)}KB.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploadResponse = await uploadFile(selectedFile);
+      
+      const fileData = {
+        name: selectedFile.name,
+        type: selectedFile.type || selectedFile.name.split('.').pop(),
+        view: uploadResponse.documentUrl,
+        remark: "",
+        uploadedAt: new Date().toISOString()
+      };
 
+      onChange(id, type, fileData);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isReceipt = type === 'receipt';
+
+  return (
+    <div className="flex items-center">
+      {file && file.view ? (
+        <div className="flex items-center space-x-2">
+          {uploading ? (
+            <FiRefreshCw className="animate-spin h-4 w-4 text-gray-500" />
+          ) : (
+            <>
+              <span className="text-sm text-gray-500">
+                {isReceipt ? 'Receipt' : 'Uploaded'}
+              </span>
+              <a 
+                href={file.view} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-indigo-600 hover:text-indigo-900 text-sm"
+              >
+                View
+              </a>
+              {isReceipt && (
+                <button 
+                  onClick={() => onChange(id, type, null)}
+                  className="text-red-500 hover:text-red-700"
+                  title="Remove receipt"
+                >
+                  <FiTrash2 className="h-4 w-4" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <label className="cursor-pointer flex items-center gap-1">
+          <input 
+            type="file" 
+            className="hidden" 
+            onChange={handleFileChange}
+            disabled={uploading || status === "Completed"}
+            accept={isReceipt ? "image/*,.pdf" : "*"}
+          />
+          <FiUpload className="h-4 w-4 text-gray-500 mr-1" />
+         {uploading ?  <span className="text-sm text-gray-700">Uploading</span> :  <span className="text-sm text-gray-700">Upload</span>}
+           <button
+             onClick={() => openViewModal(application)}
+            
+               
+                className="text-indigo-600 hover:text-indigo-900 text-sm"
+              >
+                View
+              </button>
+        </label>
+      )}
+    </div>
+  );
+}
   // Add a remark to a document
   const addDocRemark = async () => {
     if (!newDocRemark.trim() || !selectedDoc || !detailsApplication) return;
@@ -704,6 +993,89 @@ console.log("appi",applications)
     color="bg-red-100"
   />
 </div>
+      <div className="mt-6 bg-white shadow rounded-lg p-6 mb-6">
+  <h3 className="text-lg font-medium text-gray-900 mb-4">Filter Applications</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Name Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Applicant Name</label>
+      <input
+        type="text"
+        value={filters.name}
+        onChange={(e) => setFilters({...filters, name: e.target.value})}
+        placeholder="Search by name"
+        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      />
+    </div>
+    
+    {/* Provider Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Agents</label>
+      <select
+        value={filters.provider}
+        onChange={(e) => setFilters({...filters, provider: e.target.value})}
+        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      >
+        <option value="">All Agents</option>
+        {uniqueProviders.map(provider => (
+          <option key={provider} value={provider}>{provider}</option>
+        ))}
+      </select>
+    </div>
+    
+    {/* Service Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+      <select
+        value={filters.service}
+        onChange={(e) => setFilters({...filters, service: e.target.value})}
+        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      >
+        <option value="">All Services</option>
+        {uniqueServices.map(service => (
+          <option key={service} value={service}>{service}</option>
+        ))}
+      </select>
+    </div>
+    
+    {/* Date Range Filter */}
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-700">Date Range</label>
+      <div className="flex space-x-2">
+        <input
+          type="date"
+          value={filters.dateFrom}
+          onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+          className="w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="From"
+        />
+        <input
+          type="date"
+          value={filters.dateTo}
+          onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+          className="w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="To"
+        />
+      </div>
+    </div>
+  </div>
+  
+  {/* Reset Filters Button */}
+  <div className="mt-4 flex justify-end">
+    <button
+      onClick={() => setFilters({
+        name: '',
+        provider: '',
+        service: '',
+        dateFrom: '',
+        dateTo: ''
+      })}
+      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+    >
+      Reset Filters
+    </button>
+  </div>
+</div>
 
 
         <div className="mt-8">
@@ -743,6 +1115,8 @@ console.log("appi",applications)
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
                       {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th> */}
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
@@ -756,7 +1130,7 @@ console.log("appi",applications)
                         </td>
                       </tr>
                     ) : (
-                      applications.slice().reverse().map((application, index) => {
+                      filterApplications().slice().reverse().map((application, index) => {
                         const latestRemark = getLatestRemark(application);
                         const remarkCount = (application.remarks && Array.isArray(application.remarks)) 
                           ? application.remarks.length 
@@ -849,6 +1223,27 @@ console.log("appi",applications)
                             {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               ₹{typeof application.amount === 'number' ? application.amount : 0}
                             </td> */}
+                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  <div className="flex items-center">
+     
+      <FileUploadButton 
+      application={application}
+    id={application._id} 
+    type="document" 
+    onChange={handleFileChange} 
+    status={getCurrentStatus(application)}
+  />
+  </div>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  <FileUploadButton 
+    id={application._id} 
+    type="receipt" 
+    onChange={handleFileChange} 
+    file={{ view: application.receipt?.[0] }} 
+    status={getCurrentStatus(application)}
+  />
+</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center space-x-2">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
@@ -1137,9 +1532,45 @@ console.log("appi",applications)
                                </p>
                              </div>
                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
-                               <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
-                               <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.delivery}</p>
-                             </div>
+  <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
+  {editingDeliveryDate ? (
+    <div className="mt-1 flex items-center space-x-2">
+      <input
+        type="date"
+        value={tempDeliveryDate}
+        onChange={(e) => setTempDeliveryDate(e.target.value)}
+        className="text-sm border border-gray-300 rounded p-1"
+      />
+      <button 
+        onClick={() => saveDeliveryDate(selectedApplication._id)}
+        className="text-green-600 hover:text-green-800"
+        title="Save"
+      >
+        <FiSave className="h-4 w-4" />
+      </button>
+      <button 
+        onClick={cancelEditDeliveryDate}
+        className="text-red-600 hover:text-red-800"
+        title="Cancel"
+      >
+        <FiX className="h-4 w-4" />
+      </button>
+    </div>
+  ) : (
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-medium text-gray-900">
+        {selectedApplication.delivery || "Not set"}
+      </p>
+      <button 
+        onClick={() => startEditDeliveryDate(selectedApplication)}
+        className="text-indigo-600 hover:text-indigo-800 ml-2"
+        title="Edit Delivery Date"
+      >
+        <FiEdit className="h-4 w-4" />
+      </button>
+    </div>
+  )}
+</div>
                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                                <h4 className="text-sm font-medium text-gray-500">Amount</h4>
                                <p className="mt-1 text-sm font-medium text-gray-900">₹{selectedApplication.amount}</p>
@@ -1176,11 +1607,12 @@ console.log("appi",applications)
                                            <FiMessageSquare className="mr-1 h-3 w-3" /> 
                                            {doc.remark ? "View Remark" : "Add Remark"}
                                          </button>
-                                         <button
+                                         <Link
+                                          href={doc.view}
                                            className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center"
                                          >
-                                           <FiDownload className="mr-1 h-3 w-3" /> Download
-                                         </button>
+                                           <FiDownload className="mr-1 h-3 w-3" /> View
+                                         </Link>
                                        </div>
                                      </div>
                                    ))}

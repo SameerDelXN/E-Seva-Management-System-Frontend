@@ -300,11 +300,10 @@ const [openGroups, setOpenGroups] = useState({});
   // Get price based on agent's plan
   const getPriceForAgentPlan = (service) => {
     console.log("price service", service);
-    
+    console.log(agentData.location)
     // Find pricing for agent's location - note the spelling of "Maharastra"
     const locationPricing = service.planPrices.find(
-        pricing => pricing.state === "Maharastra" && 
-                  pricing.district === agentData.location
+        pricing =>  pricing.district === agentData.location
     );
     
     if (!locationPricing) {
@@ -370,7 +369,11 @@ console.log("select",selectedService)
     e.preventDefault();
     setFormLoading(true);
     setSubmissionStatus(null);
-    
+     const formattedDocuments = formData.documents.map(doc => ({
+    name: doc.name,
+    view: doc.view,
+    remark: doc.remark || ''
+  }));
     // Format the service field properly for the API
     const serviceData = {
       _id: formData.serviceId,
@@ -389,11 +392,7 @@ console.log("select",selectedService)
         name:session?.user?.fullName
       },
       // Format documents for API
-      document: formData.documents.map(doc => ({
-        name: doc.name,
-        type: doc.type,
-        view: doc.view
-      }))
+       document: formattedDocuments,
     };
     
     try {
@@ -503,41 +502,41 @@ useEffect(() => {
 
 // Handle file upload change
 const handleViewFileChange = async (e, index) => {
- 
-  
   const file = e.target.files[0];
+  if (!file) return;
+  
   setIsUploading(true);
   
   try {
-    // Create a new FormData instance
     const formData = new FormData();
     formData.append('file', file);
     
-    // Upload the file to your server
-    const response = await axios.post('/api/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+    const response = await axios.post(
+      'https://dokument-guru-backend.vercel.app/api/upload/doc',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       }
-    });
-    
-    // Get the file URL from the response
-    const fileUrl = response.data.url;
-    
-    // Update the document in the modified application
-    const updatedDocuments = [...modifiedApplication.document];
-    updatedDocuments[index] = {
-      ...updatedDocuments[index],
-      view: fileUrl,
-      // Clear the remark since we're reuploading
-      remark: ''
-    };
-    
-    setModifiedApplication({
-      ...modifiedApplication,
-      document: updatedDocuments
-    });
-    
-    setDocumentsModified(true);
+    );
+
+    if (response.data.success) {
+      const updatedDocuments = [...modifiedApplication.document];
+      updatedDocuments[index] = {
+        ...updatedDocuments[index],
+        name: file.name,
+        view: response.data.documentUrl,
+        remark: '' // Clear any existing remark when reuploading
+      };
+      
+      setModifiedApplication({
+        ...modifiedApplication,
+        document: updatedDocuments
+      });
+      
+      setDocumentsModified(true);
+    }
   } catch (error) {
     console.error("Error uploading file:", error);
     alert("Failed to upload file. Please try again.");
@@ -572,45 +571,51 @@ const handleSaveChanges = async () => {
   }
 };
 // Update the handleFileUpload function in your main component
-const handleFileUpload = (documentType, file) => {
-  // Create a preview URL for the file
-  const fileUrl = URL.createObjectURL(file);
-  
-  if (documentType === 'receipt') {
-    setFormData(prev => ({
-      ...prev,
-      receipt: {
-        name: file.name,
-        file: file,
-        view: fileUrl
+const handleFileUpload = async (documentType, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await axios.post(
+      'https://dokument-guru-backend.vercel.app/api/upload/doc',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       }
-    }));
-  } else {
-    // Check if this document type already exists
-    const existingDocIndex = formData.documents.findIndex(doc => doc.type === documentType);
-    
-    const newDoc = {
-      type: documentType,
-      name: file.name,
-      file: file,
-      view: fileUrl
-    };
-    
-    if (existingDocIndex >= 0) {
-      // Replace existing document
-      const updatedDocuments = [...formData.documents];
-      updatedDocuments[existingDocIndex] = newDoc;
-      setFormData(prev => ({
-        ...prev,
-        documents: updatedDocuments
-      }));
-    } else {
-      // Add new document
-      setFormData(prev => ({
-        ...prev,
-        documents: [...prev.documents, newDoc]
-      }));
+    );
+    console.log(response)
+    if (response.data.success) {
+      const newDoc = {
+        type: documentType,
+        name: documentType,
+        view: response.data.documentUrl,
+        remark: ''
+      };
+
+      // Check if this document type already exists
+      const existingDocIndex = formData?.documents?.findIndex(doc => doc.type === documentType);
+      
+      if (existingDocIndex >= 0) {
+        // Replace existing document
+        const updatedDocuments = [...formData.documents];
+        updatedDocuments[existingDocIndex] = newDoc;
+        setFormData(prev => ({
+          ...prev,
+          documents: updatedDocuments
+        }));
+      } else {
+        // Add new document
+        setFormData(prev => ({
+          ...prev,
+          documents: [...prev.documents, newDoc]
+        }));
+      }
     }
+  } catch (error) {
+    console.error("Error uploading document:", error);
+    alert("Failed to upload document. Please try again.");
   }
 };
 console.log("formu - ",formData.documents)
@@ -765,15 +770,39 @@ const handleCloseModal = () => {
   }
 
   // Component for document upload UI
- const DocumentUploadField = ({ documentType, label, onFileChange }) => {
+const DocumentUploadField = ({ documentType, label, onFileChange }) => {
   const [fileName, setFileName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
-
-  const handleFileChange = (e) => {
+  
+  const MAX_FILE_SIZE = 256 * 1024; // 256KB in bytes
+  
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      onFileChange(documentType, file);
+    if (!file) return;
+    
+    setError('');
+    
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File size exceeds 256KB limit. Current size: ${(file.size / 1024).toFixed(2)}KB`)
+      setError(`File size exceeds 256KB limit. Current size: ${(file.size / 1024).toFixed(2)}KB`);
+      fileInputRef.current.value = ''; // Reset file input
+      return;
+    }
+    
+    setFileName(documentType);
+    setIsUploading(true);
+    
+    try {
+      await onFileChange(documentType, file);
+    } catch (error) {
+      setFileName('');
+      setError(`Upload failed: ${error.message || 'Unknown error'}`);
+      console.error("Upload failed:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -798,9 +827,14 @@ const handleCloseModal = () => {
           <button
             type="button"
             onClick={handleUploadClick}
-            className="ml-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={isUploading}
+            className={`ml-2 px-3 py-1 text-sm rounded focus:outline-none focus:ring-2 ${
+              isUploading
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
           >
-            {fileName ? 'Change' : 'Upload'}
+            {isUploading ? 'Uploading...' : fileName ? 'Change' : 'Upload'}
           </button>
         </div>
       </div>
