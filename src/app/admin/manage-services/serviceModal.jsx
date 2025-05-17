@@ -341,63 +341,53 @@ const handleDocChange = (index, value) => {
   // };
   
   
-  const handleAddStatus = async () => {
-  setLoading(true);
-  
-  // Prepare the status data
-  const statusData = {
-    status: newStatus.name,
-    color: newStatus.hexcode,
-    askReason: newStatus.askReason,
-    priority: newStatus.priority
-  };
+  const handleAddStatus = () => {
+  if (!newStatus.name.trim()) return;
 
-  try {
-    const url = editingStatus 
-      ? ` https://dokument-guru-backend.vercel.app/api/admin/newService/update-status/${formData.id}/${editingStatus._id || editingStatus.id}`
-      : `https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`;
-
-    const method = editingStatus ? "PATCH" : "PATCH";
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(editingStatus ? statusData : { newStatus: statusData })
-    });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      setLoading(false);
-      fetchServices(); // Refresh the services list
-      setIsAdding(false);
-      setEditingStatus(null);
-      setNewStatus({
-        name: '',
-        hexcode: '#32a852',
-        askReason: false,
-        priority: 0
-      });
-    } else {
-      console.error("Error:", result.message);
-      // Show error message to user
-    }
-  } catch (error) {
-    console.error("Exception:", error);
-    setLoading(false);
+  if (editingStatus) {
+    // Update existing status locally
+    setStatuses(statuses.map(status => 
+      status.id === editingStatus.id 
+        ? { 
+            ...status, 
+            name: newStatus.name,
+            hexcode: newStatus.hexcode,
+            askReason: newStatus.askReason,
+            priority: newStatus.priority
+          }
+        : status
+    ));
+  } else {
+    // Add new status locally
+    setStatuses(prev => [
+      ...prev,
+      {
+        id: Date.now(), // temporary ID
+        name: newStatus.name,
+        hexcode: newStatus.hexcode,
+        askReason: newStatus.askReason,
+        priority: newStatus.priority
+      }
+    ]);
   }
+
+  // Reset form
+  setIsAdding(false);
+  setEditingStatus(null);
+  setNewStatus({
+    name: '',
+    hexcode: '#32a852',
+    askReason: false,
+    priority: 0
+  });
 };
 
-  const handleEditStatus = (status) => {
-      console.log("sdf",status);
+const handleEditStatus = (status) => {
   setEditingStatus(status);
-
   setNewStatus({
-    name: status.status || status.name, // Some statuses use 'status' key, others use 'name'
+    name: status.status || status.name,
     hexcode: status.color || status.hexcode,
-    askReason: status.askReason || status.askreason, // Check both possible keys
+    askReason: status.askReason || status.askreason,
     priority: status.priority || 0
   });
   setIsAdding(true);
@@ -410,77 +400,62 @@ const handleDocChange = (index, value) => {
     }));
   };
 
-  const handleDeleteStatus = (statusId) => {
-    console.log(statusId);
-    // Remove from both statuses state and formData.status
-    const updatedStatuses = statuses.filter(status => status.name !== statusId);
-    console.log(updatedStatuses);
-    setStatuses(updatedStatuses);
-   
-    // Update formData with the new status array
-    setFormData(prev => ({
-      ...prev,
-      status: updatedStatuses
-    }));
-  };
+ const handleDeleteStatus = (statusId) => {
+  setStatuses(prev => prev.filter(status => status.id !== statusId));
+};
 
-  const handleSubmit = async(e) => {
-    if (e) e.preventDefault();
-    
-    setIsSaving(true);
-    const preparedFormData = formData.formData.map(field => {
+ const handleSubmit = async (e) => {
+  if (e) e.preventDefault();
+  
+  setIsSaving(true);
+  
+  const preparedFormData = formData.formData.map(field => {
     if (field.inputType === 'checkbox' && field.price) {
       return {
         ...field,
         price: Number(field.price)
       };
     }
-    // Remove price for non-checkbox fields
     const { price, ...rest } = field;
     return rest;
   });
-    console.log("Saving data:", formData);
 
-    try {
-      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          document: formData.documents,
-          planPrices: formData.planPrices,
-          serviceGroup: formData.group,
-          status: formData.status,
-          price: formData.price,
-          formData: preparedFormData ,
-          visibility:formData.visibility// Include formData in the submission
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        console.log('✅ Updated successfully:', data);
-        setSaveSuccess(true);
-        // Show success message
-        setTimeout(() => {
-          setSaveSuccess(false);
-        }, 3000);
-        setTimeout(() => {
-          onClose(); // This will close the modal
-        }, 1500);
-      } else {
-        console.error('❌ Failed to update:', data.message);
-        // Optionally: show error message to user
-      }
-    } catch (error) {
-      console.error('🔥 Error in handleSubmit:', error);
-    } finally {
-      setIsSaving(false);
+  try {
+    const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        document: formData.documents,
+        planPrices: formData.planPrices,
+        serviceGroup: formData.group,
+        status: statuses, // Send the locally updated statuses
+        price: formData.price,
+        formData: preparedFormData,
+        visibility: formData.visibility
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('✅ Updated successfully:', data);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        onClose();
+      }, 1500);
+    } else {
+      console.error('❌ Failed to update:', data.message);
     }
-  };
+  } catch (error) {
+    console.error('🔥 Error in handleSubmit:', error);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleAvailablePlansClick = (plan) => {
     console.log("plans in location", plan);
