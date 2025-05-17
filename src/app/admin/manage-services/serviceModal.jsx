@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, DollarSign, List, Calendar, User, Pencil, Check } from 'lucide-react';
 import { FiUser, FiFile } from "react-icons/fi";
 
+
 const ServiceModal = ({ 
   isOpen, 
   onClose, 
   service, 
   fetchServices,
+  serviceGroups,
   onSave,
   isEdit,
   showUpdateSection,
@@ -17,11 +19,13 @@ const ServiceModal = ({
   selectedPlanPrices,
   setSelectedPlanPrices
 }) => {
+  console.log("groups",serviceGroups)
   const [formData, setFormData] = useState({
     name: '',
     documents: [],
     note: '',
     price: '',
+    visibility:'',
     planPrices: [],
     group: '',
     status: [],
@@ -69,6 +73,7 @@ const [tempPrice, setTempPrice] = useState('');
         note: service.note || '',
         price: service.price || '',
         group: service.group || '',
+        visibility:service.visibility || "",
         planPrices: service.planPrice,
         id: service.id || '',
         status: service.status || [],
@@ -138,7 +143,7 @@ const handlePriceChange = (e) => {
 
 const handleSavePrice = async (planId) => {
     try {
-      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-plan-price/${formData.id}`, {
+      const response = await fetch(`http://localhost:3001/api/admin/newService/update-plan-price/${formData.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -342,7 +347,7 @@ const handleDocChange = (index, value) => {
   try {
     const url = editingStatus 
       ? ` https://dokument-guru-backend.vercel.app/api/admin/newService/update-status/${formData.id}/${editingStatus._id || editingStatus.id}`
-      : `https://dokument-guru-backend.vercel.app/api/admin/newService/update-service/${formData.id}`;
+      : `http://localhost:3001/api/admin/newService/update-service/${formData.id}`;
 
     const method = editingStatus ? "PATCH" : "PATCH";
 
@@ -418,7 +423,7 @@ const handleDocChange = (index, value) => {
     console.log("Saving data:", formData);
 
     try {
-      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-namedoc/${formData.id}`, {
+      const response = await fetch(`http://localhost:3001/api/admin/newService/update-namedoc/${formData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -430,7 +435,8 @@ const handleDocChange = (index, value) => {
           serviceGroup: formData.group,
           status: formData.status,
           price: formData.price,
-          formData: formData.formData // Include formData in the submission
+          formData: formData.formData ,
+          visibility:formData.visibility// Include formData in the submission
         }),
       });
   
@@ -1128,15 +1134,48 @@ const handleDocChange = (index, value) => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Service Group</label>
-                      <input
+                      {/* <input
                         type="text"
                         name="group"
                         value={formData.group}
                         onChange={handleChange}
                         className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter service group"
-                      />
+                      /> */}
+                      <div>
+ 
+  <select
+    name="group"  // Make sure this matches your formData field name
+    value={formData.group}  // This should be the ID of the selected group
+    onChange={(e) => setFormData({...formData, group: e.target.value})}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    required
+  >
+    {serviceGroups && serviceGroups.map((group) => (
+      <option key={group._id} value={group._id}>
+        {group.name}
+      </option>
+    ))}
+    {(!serviceGroups || serviceGroups.length === 0) && (
+      <option value="">No groups available</option>
+    )}
+  </select>
+</div>
                     </div>
+                    <div className="mt-4">
+  <label className="block text-sm font-medium text-gray-700 mb-2">Visibility</label>
+  <select
+    name="visibility"
+    value={formData.visibility}
+    onChange={handleChange}
+    className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  >
+    <option value="">Select visibility</option>
+    <option value="agent">Agent</option>
+    <option value="customer">Customer</option>
+    <option value="both">Both</option>
+  </select>
+</div>
                   </div>
                 </div>
 

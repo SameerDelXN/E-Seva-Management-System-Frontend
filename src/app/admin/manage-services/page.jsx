@@ -4,6 +4,7 @@ import React, { useState,useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, DollarSign, List, Calendar, User, Pencil, Check ,PlusCircle} from 'lucide-react';
 import { FiUser, FiFile } from 'react-icons/fi';
 import ServiceModal from './serviceModal'
+
 const ServiceCard = ({ 
   service, 
   onEdit, 
@@ -292,8 +293,8 @@ const [plans,setPlans]=useState(null);
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="both">Both</option>
-                <option value="b2b">B2B</option>
-                <option value="b2c">B2C</option>
+                <option value="b2b">Agent</option>
+                <option value="b2c">Customer</option>
               </select>
             </div>
             
@@ -391,11 +392,13 @@ const App = () => {
         const formattedServices = data.servicesData.map(service => ({
           id: service._id,
           name: service.name,
+          visibility:service.visibility,
           documents: service.document,
           price: service.price,
           planPrice: service.planPrices,
           group: service.serviceGroup?.name || "Uncategorized", // Get group name from group object
-          groupId: service.serviceGroup?.id, // Store the group ID
+          groupId: service.serviceGroup?.id,
+           serviceGroup: service.serviceGroup, // Store the group ID
           status: service.status || [],
           formData : service.formData || []
         }));
@@ -434,7 +437,8 @@ const App = () => {
   const handleEditService = (service) => {
     setCurrentService({
       ...service,
-      serviceGroupId: service.groupId || (serviceGroups.length > 0 ? serviceGroups[0]?._id : '')
+      serviceGroupId: service.groupId || (serviceGroups.length > 0 ? serviceGroups[0]?._id : ''),
+      serviceGroup: service.serviceGroup
     });
     setIsEdit(true);
     setModalOpen(true);
@@ -468,11 +472,13 @@ const App = () => {
   
   const handleSaveService = async (serviceData) => {
     console.log("Raw serviceData:", serviceData);
+    // console.log("names",selectedGroup?.name);
   
     // Extract just the required IDs from the nested objects to match the schema
     const cleanedData = {
       name: serviceData.name,
-      serviceGroupId: serviceData.serviceGroupId, // Send the service group ID
+      serviceGroupId: serviceData.serviceGroupId,
+       // Send the service group ID
       document: serviceData.document, // array of strings
       visibility: serviceData.visibility || "both",
       availablity: serviceData.availablity || "subscription",
@@ -539,7 +545,7 @@ const App = () => {
     console.log("Cleaned data for API:", cleanedData);
     
     try {
-      const res = await fetch('https://dokument-guru-backend.vercel.app/api/admin/newService/addService', {
+      const res = await fetch('http://localhost:3001/api/admin/newService/addService', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

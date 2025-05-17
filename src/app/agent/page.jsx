@@ -502,26 +502,73 @@ useEffect(() => {
 }, [selectedApplication, isViewModalOpen]);
 
 // Handle file upload change
-const handleViewFileChange = async (e, index) => {
+// const handleViewFileChange = async (e, index) => {
  
   
+//   const file = e.target.files[0];
+//   setIsUploading(true);
+  
+//   try {
+//     // Create a new FormData instance
+//     const formData = new FormData();
+//     formData.append('file', file);
+    
+//     // Upload the file to your server
+//     const response = await axios.post('http://localhost:3001/api/upload/doc', formData, {
+//       headers: {
+//         'Content-Type': 'multipart/form-data'
+//       }
+//     });
+    
+//     // Get the file URL from the response
+//     const fileUrl = response.data.url;
+    
+//     // Update the document in the modified application
+//     const updatedDocuments = [...modifiedApplication.document];
+//     updatedDocuments[index] = {
+//       ...updatedDocuments[index],
+//       view: fileUrl,
+//       // Clear the remark since we're reuploading
+//       remark: ''
+//     };
+    
+//     setModifiedApplication({
+//       ...modifiedApplication,
+//       document: updatedDocuments
+//     });
+    
+//     setDocumentsModified(true);
+//   } catch (error) {
+//     console.error("Error uploading file:", error);
+//     alert("Failed to upload file. Please try again.");
+//   } finally {
+//     setIsUploading(false);
+//   }
+// };
+
+const handleViewFileChange = async (e, index) => {
   const file = e.target.files[0];
+  if (!file) return;
+  
   setIsUploading(true);
   
   try {
-    // Create a new FormData instance
     const formData = new FormData();
     formData.append('file', file);
     
-    // Upload the file to your server
-    const response = await axios.post('/api/upload', formData, {
+    // Upload the file to your API endpoint
+    const response = await axios.post('http://localhost:3001/api/upload/doc', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
     
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Failed to upload file");
+    }
+    
     // Get the file URL from the response
-    const fileUrl = response.data.url;
+    const fileUrl = response.data.documentUrl;
     
     // Update the document in the modified application
     const updatedDocuments = [...modifiedApplication.document];
@@ -540,7 +587,7 @@ const handleViewFileChange = async (e, index) => {
     setDocumentsModified(true);
   } catch (error) {
     console.error("Error uploading file:", error);
-    alert("Failed to upload file. Please try again.");
+    alert(`Failed to upload file: ${error.message}`);
   } finally {
     setIsUploading(false);
   }
@@ -580,9 +627,9 @@ const handleFileUpload = (documentType, file) => {
     setFormData(prev => ({
       ...prev,
       receipt: {
-        name: file.name,
-        file: file,
-        view: fileUrl
+        name: fileData.name,
+        file: fileData.file,
+        view: fileData.view
       }
     }));
   } else {
@@ -591,9 +638,9 @@ const handleFileUpload = (documentType, file) => {
     
     const newDoc = {
       type: documentType,
-      name: file.name,
-      file: file,
-      view: fileUrl
+      name: fileData.name,
+      file: fileData.file,
+      view: fileData.view
     };
     
     if (existingDocIndex >= 0) {
@@ -765,15 +812,89 @@ const handleCloseModal = () => {
   }
 
   // Component for document upload UI
- const DocumentUploadField = ({ documentType, label, onFileChange }) => {
+//  const DocumentUploadField = ({ documentType, label, onFileChange }) => {
+//   const [fileName, setFileName] = useState('');
+//   const fileInputRef = useRef(null);
+
+//   const handleFileChange = (e) => {
+//     const file = e.target.files[0];
+//     if (file) {
+//       setFileName(file.name);
+//       onFileChange(documentType, file);
+//     }
+//   };
+
+//   const handleUploadClick = () => {
+//     fileInputRef.current.click();
+//   };
+
+//   return (
+//     <div className="flex items-center space-x-2">
+//       <input
+//         type="file"
+//         ref={fileInputRef}
+//         onChange={handleFileChange}
+//         className="hidden"
+//         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+//       />
+//       <div className="flex-grow min-w-0">
+//         <div className="flex items-center justify-between w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+//           <span className="truncate text-sm text-gray-600">
+//             {fileName || `No file selected for ${label}`}
+//           </span>
+//           <button
+//             type="button"
+//             onClick={handleUploadClick}
+//             className="ml-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+//           >
+//             {fileName ? 'Change' : 'Upload'}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+const DocumentUploadField = ({ documentType, label, onFileChange }) => {
   const [fileName, setFileName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      onFileChange(documentType, file);
+    if (!file) return;
+    
+    setFileName(file.name);
+    setIsUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Upload to your API endpoint
+      const response = await axios.post('http://localhost:3001/api/upload/doc', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Upload failed");
+      }
+      
+      // Call the parent handler with the document type and URL
+      onFileChange(documentType, {
+        name: file.name,
+        type: file.type,
+        view: response.data.documentUrl,
+        file: file // Keep the file reference if needed
+      });
+      
+    } catch (error) {
+      console.error("Upload error:", error);
+      setFileName('');
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -798,9 +919,20 @@ const handleCloseModal = () => {
           <button
             type="button"
             onClick={handleUploadClick}
-            className="ml-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={isUploading}
+            className={`ml-2 px-3 py-1 text-white text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500 ${
+              isUploading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
-            {fileName ? 'Change' : 'Upload'}
+            {isUploading ? (
+              <FiRefreshCw className="animate-spin h-4 w-4" />
+            ) : fileName ? (
+              'Change'
+            ) : (
+              'Upload'
+            )}
           </button>
         </div>
       </div>
