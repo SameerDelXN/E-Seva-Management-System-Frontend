@@ -19,6 +19,8 @@ export default function ServiceGroupsUI() {
   const [applications, setApplications] = useState([]);
   const [appLoading, setAppLoading] = useState(true);
    const [currentPage, setCurrentPage] = useState(1);
+   const [checkboxSelections, setCheckboxSelections] = useState({});
+const [modifiedPrice, setModifiedPrice] = useState(0);
   const applicationsPerPage = 5;
 const [openGroups, setOpenGroups] = useState({});
 
@@ -193,8 +195,28 @@ const [openGroups, setOpenGroups] = useState({});
 
   // Handle form input changes
   const handleInputChange = (e,label) => {
-    const { name, value } = e.target;
-  
+    const { name, value, type, checked } = e.target
+     if (type === 'checkbox') {
+    // Find the corresponding form data to get the price
+    const checkboxData = selectedService?.formData?.find(item => item.label === label);
+    const priceChange = checkboxData?.price || 0;
+    
+    setCheckboxSelections(prev => ({
+      ...prev,
+      [label]: checked
+    }));
+    
+    // Update the modified price
+    if (checked) {
+      setModifiedPrice(prev => prev + priceChange);
+      // Show alert about price increase
+      alert(`Service price increased by ₹${priceChange} for ${label}`);
+    } else {
+      setModifiedPrice(prev => prev - priceChange);
+    }
+    
+    return;
+  }
     // For nested fields like "additional.value"
     if (name.includes('.')) {
       const [parentKey, childKey] = name.split('.');
@@ -385,7 +407,7 @@ console.log("select",selectedService)
     const submissionData = {
       ...formData,
       service: serviceData,
-      amount: parseFloat(formData.amount),
+      amount: parseFloat(selectedService.price + modifiedPrice),
       date: new Date(formData.date).toISOString(),
       provider: {
         id:session?.user?._id,
@@ -768,7 +790,7 @@ const handleCloseModal = () => {
       </div>
     );
   }
-
+  console.log("selellele = ",selectedService)
   // Component for document upload UI
 const DocumentUploadField = ({ documentType, label, onFileChange }) => {
   const [fileName, setFileName] = useState('');
@@ -1028,9 +1050,9 @@ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
       </div>
       
       <div className="flex items-center space-x-2 mb-4">
-        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
-          ₹{selectedService.price}
-        </span>
+       <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
+  ₹{selectedService.price + modifiedPrice}
+</span>
         <span className="text-sm text-gray-600">
           Service Group: {selectedService.groupName}
         </span>
@@ -1119,6 +1141,22 @@ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
           </div>
           {
             selectedService.formData.map((data)=>{
+              if (data.inputType === 'checkbox') {
+      return (
+        <div key={data.label} className="flex items-center">
+          <input
+            type="checkbox"
+            name={`additional.${data.label}`}
+            checked={checkboxSelections[data.label] || false}
+            onChange={(e) => handleInputChange(e, data.label)}
+            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+          />
+          <label className="ml-2 block text-sm text-gray-700">
+            {data.label} {data.price && `(+₹${data.price})`}
+          </label>
+        </div>
+      );
+    }
               return<div key={data.label}>
                 <label className="block text-sm font-medium text-gray-700">{data.label}*</label>
                 <div className="mt-1 relative rounded-md shadow-sm">

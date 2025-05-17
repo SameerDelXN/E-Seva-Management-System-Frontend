@@ -218,23 +218,31 @@ const handleDocChange = (index, value) => {
     setFormData(prev => ({ ...prev, documents: newDocs }));
   };
 
-  const handleFormDataChange = (index, field, value) => {
-    const newFormData = [...(formData.formData || [])];
-    newFormData[index] = {
-      ...newFormData[index],
-      [field]: value
-    };
-    
-    // Generate a unique name if label changes and name doesn't exist yet
-    if (field === 'label' && !newFormData[index].name) {
-      newFormData[index].name = value.toLowerCase().replace(/\s+/g, '_');
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      formData: newFormData
-    }));
+ const handleFormDataChange = (index, field, value) => {
+  const newFormData = [...(formData.formData || [])];
+  
+  // Only keep price if it's a checkbox
+  const updatedField = {
+    ...newFormData[index],
+    [field]: value
   };
+  
+  if (updatedField.inputType !== 'checkbox' && field === 'price') {
+    delete updatedField.price;
+  }
+  
+  // Generate a unique name if label changes and name doesn't exist yet
+  if (field === 'label' && !updatedField.name) {
+    updatedField.name = value.toLowerCase().replace(/\s+/g, '_');
+  }
+  
+  newFormData[index] = updatedField;
+  
+  setFormData(prev => ({
+    ...prev,
+    formData: newFormData
+  }));
+};
 
   const addFormDataField = () => {
     const newField = {
@@ -420,6 +428,17 @@ const handleDocChange = (index, value) => {
     if (e) e.preventDefault();
     
     setIsSaving(true);
+    const preparedFormData = formData.formData.map(field => {
+    if (field.inputType === 'checkbox' && field.price) {
+      return {
+        ...field,
+        price: Number(field.price)
+      };
+    }
+    // Remove price for non-checkbox fields
+    const { price, ...rest } = field;
+    return rest;
+  });
     console.log("Saving data:", formData);
 
     try {
@@ -435,7 +454,7 @@ const handleDocChange = (index, value) => {
           serviceGroup: formData.group,
           status: formData.status,
           price: formData.price,
-          formData: formData.formData ,
+          formData: preparedFormData ,
           visibility:formData.visibility// Include formData in the submission
         }),
       });
@@ -490,161 +509,7 @@ const handleDocChange = (index, value) => {
         </button>
       </div>
 
-      {/* {isAdding && (
-        <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
-          <h3 className="font-medium mb-4 text-lg text-gray-700">
-            {editingStatus ? 'Edit Status' : 'Add New Status'}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status Name</label>
-              <input
-                type="text"
-                value={newStatus.name}
-                onChange={(e) => setNewStatus({...newStatus, name: e.target.value})}
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter status name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Color Code</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={newStatus.hexcode}
-                  onChange={(e) => setNewStatus({...newStatus, hexcode: e.target.value})}
-                  className="w-12 h-12 border border-gray-300 rounded-lg cursor-pointer"
-                />
-                <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{newStatus.hexcode}</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ask Reason</label>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={newStatus.askreason}
-                    onChange={() => setNewStatus({...newStatus, askreason: !newStatus.askreason})}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">
-                    Require reason for this status
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={() => {
-                setIsAdding(false);
-                setEditingStatus(null);
-                setNewStatus({
-                  name: '',
-                  hexcode: '#32a852',
-                  askReason: false
-                });
-              }}
-              className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm transition duration-200 hover:bg-gray-300 shadow-sm"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAddStatus}
-              className={loading ? "px-5 py-2.5 bg-green-300 text-white rounded-lg text-sm transition duration-200 hover:bg-green-300 shadow-md hover:shadow-lg flex items-center gap-2" : "px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"}
-            >
-              <Check className="w-4 h-4" />
-              {loading ? 'Adding Status' : 'Add Status'}
-            </button>
-          </div>
-        </div>
-      )} */}
-      {/* {isAdding && (
-  <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
-    <h3 className="font-medium mb-4 text-lg text-gray-700">
-      {editingStatus ? 'Edit Status' : 'Add New Status'}
-    </h3>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Status Name</label>
-        <input
-          type="text"
-          value={newStatus.name}
-          onChange={(e) => setNewStatus({ ...newStatus, name: e.target.value })}
-          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter status name"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Color Code</label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={newStatus.hexcode}
-            onChange={(e) => setNewStatus({ ...newStatus, hexcode: e.target.value })}
-            className="w-12 h-12 border border-gray-300 rounded-lg cursor-pointer"
-          />
-          <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">{newStatus.hexcode}</span>
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Ask Reason</label>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={newStatus.askReason}
-              onChange={() => setNewStatus({ ...newStatus, askReason: !newStatus.askReason })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label className="ml-2 text-sm text-gray-700">
-              Require reason for this status
-            </label>
-          </div>
-        </div>
-      </div>
-      <div className="col-span-3 md:col-span-1">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-        <input
-          type="number"
-          value={newStatus.priority}
-          onChange={(e) => setNewStatus({ ...newStatus, priority: Number(e.target.value) })}
-          className="w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Enter priority"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end gap-3 mt-6">
-      <button
-        type="button"
-        onClick={() => {
-          setIsAdding(false);
-          setEditingStatus(null);
-          setNewStatus({
-            name: '',
-            hexcode: '#32a852',
-            askReason: false,
-            priority: 0
-          });
-        }}
-        className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg text-sm transition duration-200 hover:bg-gray-300 shadow-sm"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        onClick={handleAddStatus}
-        className="px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm transition duration-200 hover:bg-green-700 shadow-md hover:shadow-lg flex items-center gap-2"
-      >
-        <Check className="w-4 h-4" />
-        {editingStatus ? 'Save Changes' : 'Add Status'}
-      </button>
-    </div>
-  </div>
-)} */}
+    
 {isAdding && (
   <div className="bg-gray-50 p-6 rounded-lg mb-6 shadow-inner border border-gray-200">
     <h3 className="font-medium mb-4 text-lg text-gray-700">
@@ -882,6 +747,18 @@ const handleDocChange = (index, value) => {
                     />
                   </div>
                 </div>
+                {field.inputType === 'checkbox' && (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-700">Price</label>
+      <input
+        type="number"
+        value={field.price || ''}
+        onChange={(e) => handleFormDataChange(index, 'price', e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Enter price for this option"
+      />
+    </div>
+  )}
 
                 <div className="flex justify-end">
                   <button
@@ -1412,113 +1289,7 @@ const handleDocChange = (index, value) => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                       </tr>
                     </thead>
-                    {/* <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Amol Awari</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleAddPricesClick({
-                              id: 1,
-                              name: 'Amol Awari',
-                              govtPrice: '107.00',
-                              commissionPrice: '43.00',
-                              taxPercentage: '0.00',
-                              tatkalGovtPrice: '107.00',
-                              tatkalCommissionPrice: '43.00',
-                              tatkalTaxPercentage: '0.00'
-                            })}
-                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Add Prices
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleAddPricesClick({
-                              id: 2,
-                              name: 'Driving School',
-                              govtPrice: '107.00',
-                              commissionPrice: '43.00',
-                              taxPercentage: '0.00',
-                              tatkalGovtPrice: '107.00',
-                              tatkalCommissionPrice: '43.00',
-                              tatkalTaxPercentage: '0.00'
-                            })}
-                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Add Prices
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">maha e seva monthly Suscription</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleAddPricesClick({
-                              id: 3,
-                              name: 'maha e seva monthly Suscription',
-                              govtPrice: '107.00',
-                              commissionPrice: '43.00',
-                              taxPercentage: '0.00',
-                              tatkalGovtPrice: '107.00',
-                              tatkalCommissionPrice: '43.00',
-                              tatkalTaxPercentage: '0.00'
-                            })}
-                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Add Prices
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">4</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dokument Guru Gold</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleAddPricesClick({
-                              id: 4,
-                              name: 'Dokument Guru Gold',
-                              govtPrice: '107.00',
-                              commissionPrice: '43.00',
-                              taxPercentage: '0.00',
-                              tatkalGovtPrice: '107.00',
-                              tatkalCommissionPrice: '43.00',
-                              tatkalTaxPercentage: '0.00'
-                            })}
-                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Add Prices
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">5</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Driving School Pro</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button 
-                            onClick={() => handleAddPricesClick({
-                              id: 5,
-                              name: 'Driving School Pro',
-                              govtPrice: '107.00',
-                              commissionPrice: '43.00',
-                              taxPercentage: '0.00',
-                              tatkalGovtPrice: '107.00',
-                              tatkalCommissionPrice: '43.00',
-                              tatkalTaxPercentage: '0.00'
-                            })}
-                            className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Add Prices
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody> */}
+               
 
 <tbody className="divide-y divide-gray-200">
   {newplan?.map((planItem, index) => (
