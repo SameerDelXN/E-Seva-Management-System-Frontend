@@ -400,9 +400,19 @@ const handleEditStatus = (status) => {
     }));
   };
 
- const handleDeleteStatus = (statusId) => {
-  setStatuses(prev => prev.filter(status => status.id !== statusId));
-};
+const handleDeleteStatus = (statusId) => {
+    console.log(statusId);
+    // Remove from both statuses state and formData.status
+    const updatedStatuses = statuses.filter(status => status.name !== statusId);
+    console.log(updatedStatuses);
+    setStatuses(updatedStatuses);
+   
+    // Update formData with the new status array
+    setFormData(prev => ({
+      ...prev,
+      status: updatedStatuses
+    }));
+  };
 
  const handleSubmit = async (e) => {
   if (e) e.preventDefault();
