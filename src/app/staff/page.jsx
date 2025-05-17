@@ -2,9 +2,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FiRefreshCw, FiUpload, FiFile, FiList, FiCheckCircle, FiClock, FiUserCheck, FiEdit, FiSave, FiX, FiMessageSquare, FiEye, FiDownload } from 'react-icons/fi';
+import { FiRefreshCw, FiUpload, FiFile, FiList, FiCheckCircle, FiClock, FiUserCheck, FiEdit, FiSave, FiX, FiMessageSquare, FiEye, FiDownload,FiTrash2  } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
-
+import Link from 'next/link';
+import { uploadFile } from '@/utils/uploadFile';
 export default function StaffDashboard() {
   const { session } = useSession();
   const [applications, setApplications] = useState([]);
@@ -24,6 +25,13 @@ export default function StaffDashboard() {
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [currentRemark, setCurrentRemark] = useState("");
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  const [filters, setFilters] = useState({
+  name: '',
+  status: '',
+  service: '',
+  dateFrom: '',
+  dateTo: ''
+});
 
   // Add new states for view modal and document remarks
   const [showViewModal, setShowViewModal] = useState(false);
@@ -32,7 +40,8 @@ export default function StaffDashboard() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [documentRemarks, setDocumentRemarks] = useState([]);
   const [newDocumentRemark, setNewDocumentRemark] = useState("");
-
+const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+const [tempDeliveryDate, setTempDeliveryDate] = useState("");
   const API_BASE_URL = "https://dokument-guru-backend.vercel.app/api/application";
   const globalStatusOptions = [];
 
@@ -42,7 +51,47 @@ export default function StaffDashboard() {
     pending: 0,
     completed: 0
   });
+   const formatDatee = (dateString) => {
+  const [year, month, day] = dateString.split("-");
+  return `${day}/${month}/${year}`;
+};
+   const startEditDeliveryDate = (application) => {
+  setTempDeliveryDate(application.delivery || "");
+  setEditingDeliveryDate(true);
+};
 
+const saveDeliveryDate = async (applicationId) => {
+  console.log(tempDeliveryDate)
+  try {
+    const response = await fetch(`${API_BASE_URL}/update/${applicationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ delivery: formatDatee(tempDeliveryDate )}),
+    });
+    console.log(response)
+    if (!response.ok) throw new Error('Failed to update delivery date');
+
+    const updatedApplication = await response.json();
+    
+    setApplications(applications.map(app => 
+      app._id === applicationId ? updatedApplication : app
+    ));
+    
+    setEditingDeliveryDate(false);
+    setShowViewModal(false)
+    fetchApplications(); // Refresh the data
+    
+  } catch (err) {
+    console.error("Error updating delivery date:", err);
+    alert("Failed to update delivery date. Please try again.");
+  }
+};
+
+const cancelEditDeliveryDate = () => {
+  setEditingDeliveryDate(false);
+};
   // Fetch all applications assigned to current staff
   const fetchApplications = async () => {
     try {
@@ -148,7 +197,78 @@ export default function StaffDashboard() {
       alert("Failed to update status. Please try again.");
     }
   };
+  const filterApplications = () => {
+  return applications.filter(app => {
+    // Name filter (case insensitive partial match)
+    if (filters.name && !app.name.toLowerCase().includes(filters.name.toLowerCase())) {
+      return false;
+    }
+    
+    // Status filter
+    if (filters.status) {
+      const currentStatus = getCurrentStatus(app);
+      if (currentStatus !== filters.status) {
+        return false;
+      }
+    }
+    
+    // Service filter
+    if (filters.service) {
+      const serviceName = typeof app.service === 'object' ? app.service.name : app.service;
+      if (serviceName !== filters.service) {
+        return false;
+      }
+    }
+    
+    // Date range filter
+    if (filters.dateFrom || filters.dateTo) {
+      const appDate = new Date(app.date);
+      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
+      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
+      
+      if (fromDate && appDate < fromDate) return false;
+      if (toDate && appDate > toDate) return false;
+    }
+    
+    return true;
+  });
+};
 
+// Get unique values for filter dropdowns
+const uniqueServices = [
+  ...new Set(
+    applications
+      .map(app => typeof app.service === 'object' ? app.service?.name : app.service)
+      .filter(Boolean)
+  )
+];
+    const getStatusOptions = () => {
+  const allStatuses = new Set();
+  
+  applications.forEach(app => {
+    if (app.service && app.service.status) {
+      // Handle both cases where service is an object or just a string
+      const serviceStatuses = typeof app.service === 'object' 
+        ? app.service.status 
+        : applications.find(a => a.service === app.service)?.service?.status;
+      
+      if (serviceStatuses && Array.isArray(serviceStatuses)) {
+        serviceStatuses.forEach(status => {
+          if (typeof status === 'object') {
+            allStatuses.add(status.name);
+          } else {
+            allStatuses.add(status);
+          }
+        });
+      }
+    }
+  });
+  
+  return Array.from(allStatuses);
+};
+
+
+const statusOptions = getStatusOptions();
   // New function to add or update remark
   const updateRemark = async (id, remark) => {
     try {
@@ -191,44 +311,7 @@ export default function StaffDashboard() {
     }
   };
 
-  const handleFileChange = async (e, id, type) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      // In a real implementation, you would upload the file to your server
-      // and get back a URL or file path
-      const fileFieldName = type === 'document' ? 'document' : 'receipt';
-      const fileData = { [fileFieldName]: file.name }; // In real app, this would be file URL
-
-      const response = await fetch(`${API_BASE_URL}/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ _id: id, ...fileData }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to upload ${type}: ${response.status}`);
-      }
-
-      const updatedApplication = await response.json();
-      setApplications(applications.map(app =>
-        app._id === id ? updatedApplication : app
-      ));
-
-      if (type === 'document') {
-        setSelectedFile(file);
-      } else {
-        setSelectedReceipt(file);
-      }
-
-    } catch (err) {
-      console.error(`Error uploading ${type}:`, err);
-      alert(`Failed to upload ${type}. Please try again.`);
-    }
-  };
+ 
 
   const getServiceStatusOptions = (application) => {
     if (!application.service || !application.service.status || !Array.isArray(application.service.status)) {
@@ -476,7 +559,139 @@ export default function StaffDashboard() {
   useEffect(() => {
     fetchApplications();
   }, []);
+  const handleFileChange = async (id, type, fileData) => {
+  try {
+    let updateData;
+    
+    if (type === 'document') {
+      // For documents - add to array while preserving existing documents
+      const currentApp = applications.find(app => app._id === id);
+      const currentDocuments = currentApp?.document || [];
+      
+      updateData = { 
+        document: [...currentDocuments, fileData] 
+      };
+    } else {
+      // For receipts - set or clear the value
+      updateData = { 
+        receipt: fileData ? [fileData] : [] 
+      };
+    }
 
+    const response = await fetch(`${API_BASE_URL}/update/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) throw new Error('Failed to update file reference');
+
+    const updatedApplication = await response.json();
+    
+    setApplications(applications.map(app => 
+      app._id === id ? updatedApplication : app
+    ));
+    fetchApplications()
+    if (fileData) {
+      alert(`${type === 'document' ? 'Document' : 'Receipt'} ${fileData.view ? 'uploaded' : 'removed'} successfully!`);
+    }
+    
+  } catch (err) {
+    console.error(`Error updating ${type}:`, err);
+    alert(`Failed to update ${type}. Please try again.`);
+  }
+};
+    function FileUploadButton({ application,id, type, onChange, file, status }) {
+    const [uploading, setUploading] = useState(false);
+    const MAX_FILE_SIZE = 256 * 1024 ; // 5MB in bytes (increased from 256KB)
+
+    const handleFileChange = async (e) => {
+      const selectedFile = e.target.files[0];
+      if (!selectedFile) return;
+      if (selectedFile.size > MAX_FILE_SIZE) {
+      alert(`File size exceeds 256kb limit. Your file is ${Math.round(selectedFile.size / 1024)}KB.`);
+      return;
+    }
+      setUploading(true);
+      try {
+        const uploadResponse = await uploadFile(selectedFile);
+        
+        const fileData = {
+          name: selectedFile.name,
+          type: selectedFile.type || selectedFile.name.split('.').pop(),
+          view: uploadResponse.documentUrl,
+          remark: "",
+          uploadedAt: new Date().toISOString()
+        };
+  
+        onChange(id, type, fileData);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        alert("Failed to upload file. Please try again.");
+      } finally {
+        setUploading(false);
+      }
+    };
+  
+    const isReceipt = type === 'receipt';
+  
+    return (
+      <div className="flex items-center">
+        {file && file.view ? (
+          <div className="flex items-center space-x-2">
+            {uploading ? (
+              <FiRefreshCw className="animate-spin h-4 w-4 text-gray-500" />
+            ) : (
+              <>
+                <span className="text-sm text-gray-500">
+                  {isReceipt ? 'Receipt' : 'Uploaded'}
+                </span>
+                <a 
+                  href={file.view} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:text-indigo-900 text-sm"
+                >
+                  View
+                </a>
+                {isReceipt && (
+                  <button 
+                    onClick={() => onChange(id, type, null)}
+                    className="text-red-500 hover:text-red-700"
+                    title="Remove receipt"
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <label className="cursor-pointer flex items-center gap-1">
+            <input 
+              type="file" 
+              className="hidden" 
+              onChange={handleFileChange}
+              disabled={uploading || status === "Completed"}
+              accept={isReceipt ? "image/*,.pdf" : "*"}
+            />
+            <FiUpload className="h-4 w-4 text-gray-500 mr-1" />
+            <span className="text-sm text-gray-700">Upload</span>
+             <button
+               onClick={() => openViewModal(application)}
+              
+                 
+                  className="text-indigo-600 hover:text-indigo-900 text-sm"
+                >
+                  View
+                </button>
+          </label>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -508,6 +723,89 @@ export default function StaffDashboard() {
             color="bg-green-100"
           />
         </div>
+      <div className="mt-6 bg-white shadow rounded-lg p-6 mb-6">
+  <h3 className="text-lg font-medium text-gray-900 mb-4">Filter Applications</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Name Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Applicant Name</label>
+      <input
+        type="text"
+        value={filters.name}
+        onChange={(e) => setFilters({...filters, name: e.target.value})}
+        placeholder="Search by name"
+        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      />
+    </div>
+    
+    {/* Status Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+     <select
+  value={filters.status}
+  onChange={(e) => setFilters({...filters, status: e.target.value})}
+  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+>
+  <option value="">All Statuses</option>
+  {statusOptions.map(status => (
+    <option key={status} value={status}>{status}</option>
+  ))}
+</select>
+    </div>
+    
+    {/* Service Filter */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+      <select
+        value={filters.service}
+        onChange={(e) => setFilters({...filters, service: e.target.value})}
+        className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      >
+        <option value="">All Services</option>
+        {uniqueServices.map(service => (
+          <option key={service} value={service}>{service}</option>
+        ))}
+      </select>
+    </div>
+    
+    {/* Date Range Filter */}
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-700">Date Range</label>
+      <div className="flex space-x-2">
+        <input
+          type="date"
+          value={filters.dateFrom}
+          onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+          className="w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="From"
+        />
+        <input
+          type="date"
+          value={filters.dateTo}
+          onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+          className="w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="To"
+        />
+      </div>
+    </div>
+  </div>
+  
+  {/* Reset Filters Button */}
+  <div className="mt-4 flex justify-end">
+    <button
+      onClick={() => setFilters({
+        name: '',
+        status: '',
+        service: '',
+        dateFrom: '',
+        dateTo: ''
+      })}
+      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+    >
+      Reset Filters
+    </button>
+  </div>
+</div>
 
         {/* Applications Section */}
         <div className="mt-8">
@@ -564,7 +862,7 @@ export default function StaffDashboard() {
                         </td>
                       </tr>
                     ) : (
-                      applications.slice().reverse().map((application, index) => (
+                     filterApplications().slice().reverse().map((application, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
@@ -704,35 +1002,26 @@ export default function StaffDashboard() {
                           </td>
                           {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{application.amount}</td> */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {application.document ? (
-                              <div className="flex items-center">
-                                <span className="text-sm text-gray-500">Uploaded</span>
-                              </div>
-                            ) : (
-                              <FileUpload
-                                id={application._id}
-                                type="document"
-                                onChange={handleFileChange}
-                                file={application.document}
-                                status={application.status}
-                              />
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {application.receipt ? (
-                              <div className="flex items-center">
-                                <span className="text-sm text-gray-500">Uploaded</span>
-                              </div>
-                            ) : (
-                              <FileUpload
-                                id={application._id}
-                                type="receipt"
-                                onChange={handleFileChange}
-                                file={application.receipt}
-                                status={application.status}
-                              />
-                            )}
-                          </td>
+  <FileUploadButton 
+    id={application._id} 
+    type="document" 
+    onChange={handleFileChange} 
+    // file={application.document?.[0]} // Assuming document is an array
+    status={getCurrentStatus(application)}
+    onView={() => openViewModal(application)}
+  />
+</td>
+
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  <FileUploadButton 
+    id={application._id} 
+    type="receipt" 
+    onChange={handleFileChange} 
+    file={application.receipt?.[0]} // Assuming receipt is an array
+    status={getCurrentStatus(application)}
+    onView={() => openViewModal(application)}
+  />
+</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <button
                               onClick={() => openViewModal(application)}
@@ -847,10 +1136,46 @@ export default function StaffDashboard() {
                             : selectedApplication.service}
                         </p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
-                        <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
-                        <p className="mt-1 text-sm font-medium text-gray-900">{selectedApplication.delivery}</p>
-                      </div>
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+  <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
+  {editingDeliveryDate ? (
+    <div className="mt-1 flex items-center space-x-2">
+      <input
+        type="date"
+        value={tempDeliveryDate}
+        onChange={(e) => setTempDeliveryDate(e.target.value)}
+        className="text-sm border border-gray-300 rounded p-1"
+      />
+      <button 
+        onClick={() => saveDeliveryDate(selectedApplication._id)}
+        className="text-green-600 hover:text-green-800"
+        title="Save"
+      >
+        <FiSave className="h-4 w-4" />
+      </button>
+      <button 
+        onClick={cancelEditDeliveryDate}
+        className="text-red-600 hover:text-red-800"
+        title="Cancel"
+      >
+        <FiX className="h-4 w-4" />
+      </button>
+    </div>
+  ) : (
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-medium text-gray-900">
+        {selectedApplication.delivery || "Not set"}
+      </p>
+      <button 
+        onClick={() => startEditDeliveryDate(selectedApplication)}
+        className="text-indigo-600 hover:text-indigo-800 ml-2"
+        title="Edit Delivery Date"
+      >
+        <FiEdit className="h-4 w-4" />
+      </button>
+    </div>
+  )}
+</div>
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Amount</h4>
                         <p className="mt-1 text-sm font-medium text-gray-900">₹{selectedApplication.amount}</p>
@@ -887,11 +1212,12 @@ export default function StaffDashboard() {
                                     <FiMessageSquare className="mr-1 h-3 w-3" />
                                     {doc.remark ? "View Remark" : "Add Remark"}
                                   </button>
-                                  <button
+                                  <Link
+                                    href={doc.view}
                                     className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center"
                                   >
-                                    <FiDownload className="mr-1 h-3 w-3" /> Download
-                                  </button>
+                                    <FiDownload className="mr-1 h-3 w-3" /> View
+                                  </Link>
                                 </div>
                               </div>
                             ))}

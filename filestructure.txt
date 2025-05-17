@@ -175,4 +175,5 @@
     |-- utils
         |-- cloudinary.js
         |-- mongodb.js
+        |-- uploadFile.js
 |-- tailwind.config.js

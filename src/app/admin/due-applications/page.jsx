@@ -566,19 +566,7 @@ export default function DueApplications() {
                       </div>
                     </div>
                     
-                    {/* Remarks Section */}
-                    <div className="mb-6">
-                      <h4 className="text-lg font-medium text-gray-700 mb-3">Application Remarks</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                        {selectedApplication.remark ? (
-                          <div className="bg-white p-3 rounded border border-gray-200">
-                            <p className="text-sm">{selectedApplication.remark}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No remarks added</p>
-                        )}
-                      </div>
-                    </div>
+                 
                   </div>
                 </div>
               </div>

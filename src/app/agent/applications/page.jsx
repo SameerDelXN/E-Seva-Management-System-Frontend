@@ -819,53 +819,8 @@ export default function ApplicationsPage() {
                 </div>
               </div>
               
-              {/* Additional Information */}
-              <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mb-6">
-                <div className="flex items-center mb-4">
-                  <div className="p-2 bg-emerald-100 rounded-lg mr-3">
-                    <FiMapPin className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900">Additional Information</h4>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Address */}
-                  {selectedApplication.address && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Address</p>
-                      <p className="text-sm text-gray-900 mt-1">{selectedApplication.address}</p>
-                    </div>
-                  )}
-                  
-                  {/* Email */}
-                  {selectedApplication.email && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</p>
-                      <p className="text-sm text-gray-900 mt-1">{selectedApplication.email}</p>
-                    </div>
-                  )}
-                  
-                  {/* Notes */}
-                  {selectedApplication.notes && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</p>
-                      <p className="text-sm text-gray-900 mt-1">{selectedApplication.notes}</p>
-                    </div>
-                  )}
-                  
-                  {/* Service-specific fields */}
-                  {selectedApplication.form && 
-                   selectedApplication.form.length > 0 && 
-                   selectedApplication.form.map((formItem, index) => (
-                    <div key={index}>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {formItem.label}
-                      </p>
-                      <p className="text-sm text-gray-900 mt-1">{formItem.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+  
+           
               
               {/* Action Footer */}
               <div className="flex items-center justify-end pt-4 border-t border-gray-200">
