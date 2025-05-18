@@ -1571,10 +1571,10 @@ const uniqueServices = [
     </div>
   )}
 </div>
-                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                             {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                                <h4 className="text-sm font-medium text-gray-500">Amount</h4>
                                <p className="mt-1 text-sm font-medium text-gray-900">₹{selectedApplication.amount}</p>
-                             </div>
+                             </div> */}
                              <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                                <h4 className="text-sm font-medium text-gray-500">Status</h4>
                                <div className="mt-1">

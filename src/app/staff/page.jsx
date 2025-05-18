@@ -355,7 +355,10 @@ const statusOptions = getStatusOptions();
     const statusOption = allStatusOptions.find(option => option.name === currentStatusName);
     setShowReasonField(statusOption?.askreason || false);
   };
-
+  const handleRemoveReceipt = async (applicationId) => {
+  if (!confirm("Are you sure you want to remove this receipt?")) return;
+  await handleFileChange(applicationId, 'receipt', null);
+};
   const cancelEditStatus = () => {
     setEditingStatusId(null);
     setEditingStatus("");
@@ -511,6 +514,14 @@ const statusOptions = getStatusOptions();
       const updatePayload = {
         ...selectedApplication,
         document: updatedDocuments,
+        initialStatus:[
+        {
+          name: "Objection",
+      hexcode:"#9C27B0",
+      askreason: true,
+      reason:"remark added",
+        }
+      ],
         remarkHistory: [...(selectedApplication.remarkHistory || []), newRemarkHistory]
       };
 
@@ -559,7 +570,7 @@ const statusOptions = getStatusOptions();
   useEffect(() => {
     fetchApplications();
   }, []);
-  const handleFileChange = async (id, type, fileData) => {
+const handleFileChange = async (id, type, fileData) => {
   try {
     let updateData;
     
@@ -569,12 +580,12 @@ const statusOptions = getStatusOptions();
       const currentDocuments = currentApp?.document || [];
       
       updateData = { 
-        document: [...currentDocuments, fileData] 
+        document: fileData  
       };
     } else {
       // For receipts - set or clear the value
       updateData = { 
-        receipt: fileData ? [fileData] : [] 
+        receipt: fileData ? [fileData.view] : [] 
       };
     }
 
@@ -593,9 +604,11 @@ const statusOptions = getStatusOptions();
     setApplications(applications.map(app => 
       app._id === id ? updatedApplication : app
     ));
-    fetchApplications()
+    
+    fetchApplications();
+    
     if (fileData) {
-      alert(`${type === 'document' ? 'Document' : 'Receipt'} ${fileData.view ? 'uploaded' : 'removed'} successfully!`);
+      alert(`${type === 'document' ? 'Document' : 'Receipt'} uploaded successfully!`);
     }
     
   } catch (err) {
@@ -1012,7 +1025,7 @@ const statusOptions = getStatusOptions();
   />
 </td>
 
-<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
   <FileUploadButton 
     id={application._id} 
     type="receipt" 
@@ -1021,6 +1034,39 @@ const statusOptions = getStatusOptions();
     status={getCurrentStatus(application)}
     onView={() => openViewModal(application)}
   />
+</td> */}
+
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  <div className="flex items-center">
+    {application.receipt?.length > 0 ? (
+      <div className="flex items-center space-x-2">
+        <FiFile className="text-green-500" />
+        <span className="text-sm">Uploaded</span>
+        <button 
+          onClick={() => handleViewDocument(application.receipt[0])}
+          className="text-green-600 hover:text-green-900 text-xs"
+        >
+          View
+        </button>
+        <button 
+          onClick={() => handleRemoveReceipt(application._id)}
+          className="text-red-500 hover:text-red-700"
+          title="Remove receipt"
+        >
+          <FiTrash2 className="h-4 w-4" />
+        </button>
+      </div>
+    ) : (
+      <FileUploadButton 
+    id={application._id} 
+    type="receipt" 
+    onChange={handleFileChange} 
+    file={application.receipt?.[0]} // Assuming receipt is an array
+    status={getCurrentStatus(application)}
+    onView={() => openViewModal(application)}
+  />
+    )}
+  </div>
 </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <button
@@ -1176,10 +1222,10 @@ const statusOptions = getStatusOptions();
     </div>
   )}
 </div>
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
+                      {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Amount</h4>
                         <p className="mt-1 text-sm font-medium text-gray-900">₹{selectedApplication.amount}</p>
-                      </div>
+                      </div> */}
                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                         <h4 className="text-sm font-medium text-gray-500">Status</h4>
                         <div className="mt-1">

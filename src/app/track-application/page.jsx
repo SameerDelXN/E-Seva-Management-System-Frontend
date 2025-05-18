@@ -673,7 +673,7 @@ export default function TrackApplication() {
                         </svg>
                         Documents Submitted
                       </h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3">
                         {selectedApplication.document.map((doc, idx) => (
                           <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm flex items-center">
                             <div className="p-2 rounded-md bg-blue-100 mr-3">

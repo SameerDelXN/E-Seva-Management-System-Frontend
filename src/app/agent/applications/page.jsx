@@ -16,7 +16,7 @@ export default function ApplicationsPage() {
   const [modifiedApplication, setModifiedApplication] = useState(null);
   const [documentsModified, setDocumentsModified] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  
+  const [uploadingDocuments, setUploadingDocuments] = useState([]);
   // Filter state
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -36,9 +36,9 @@ export default function ApplicationsPage() {
   const totalPages = Math.ceil(filteredApplications.length / applicationsPerPage);
 
   // Extract unique services and statuses for filter dropdowns
-  const uniqueServices = [...new Set(applications.map(app => app.service.name))];
+  const uniqueServices = [...new Set(applications.map(app => app.service?.name))];
   const uniqueStatuses = [...new Set(applications.flatMap(app => 
-    app.initialStatus.map(status => status.name)
+    app.initialStatus?.map(status => status.name)
   ))].filter(Boolean);
 
   // Fetch applications
@@ -169,47 +169,74 @@ export default function ApplicationsPage() {
   }, [selectedApplication, isViewModalOpen]);
 
   // Handle file upload change
-  const handleViewFileChange = async (e, index) => {
-    const file = e.target.files[0];
-    setIsUploading(true);
+ const handleViewFileChange = async (e, index) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Set uploading state for this specific document
+  setUploadingDocuments(prev => {
+    const newUploading = [...prev];
+    newUploading[index] = true;
+    return newUploading;
+  });
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
     
-    try {
-      // Create a new FormData instance
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Upload the file to your server
-      const response = await axios.post('/api/upload', formData, {
+    const response = await axios.post(
+      'https://dokument-guru-backend.vercel.app/api/upload/doc',
+      formData,
+      {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
-      });
-      
-      // Get the file URL from the response
-      const fileUrl = response.data.url;
-      
-      // Update the document in the modified application
+      }
+    );
+    
+    if (response.data.success) {
+      const documentUrl = response.data.documentUrl;
       const updatedDocuments = [...modifiedApplication.document];
       updatedDocuments[index] = {
         ...updatedDocuments[index],
-        view: fileUrl,
-        // Clear the remark since we're reuploading
+        view: documentUrl,
         remark: ''
       };
       
       setModifiedApplication({
         ...modifiedApplication,
-        document: updatedDocuments
+        document: updatedDocuments,
+        initialStatus: [{
+          name: "Initiated",
+          hexcode: "#9C27B0",
+          askreason: true,
+          reason: "Document is Replaced by Admin as per Remark",
+        }]
       });
       
-      setDocumentsModified(true);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("Failed to upload file. Please try again.");
-    } finally {
-      setIsUploading(false);
+      // Check if all required documents have been replaced
+      const allReplaced = selectedApplication.document.every((doc, i) => {
+        // If document had a remark, check if it's been replaced
+        if (doc.remark) {
+          return updatedDocuments[i].view && !updatedDocuments[i].remark;
+        }
+        return true; // No remark means no need to replace
+      });
+      
+      setDocumentsModified(allReplaced);
     }
-  };
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    alert("Failed to upload file. Please try again.");
+  } finally {
+    // Clear uploading state for this document
+    setUploadingDocuments(prev => {
+      const newUploading = [...prev];
+      newUploading[index] = false;
+      return newUploading;
+    });
+  }
+};
 
   // Handle saving changes
   const handleSaveChanges = async () => {
@@ -578,7 +605,7 @@ export default function ApplicationsPage() {
                     className="px-3 py-1 text-sm font-medium rounded-full shadow-sm"
                     style={{ 
                       backgroundColor: selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb',
-                      color: getContrastColor(selectedApplication.initialStatus[0]?.hexcode || '#e5e7eb')
+                      color: getContrastColor(selectedApplication.initialStatus?.[0]?.hexcode || '#e5e7eb')
                     }}
                   >
                     {selectedApplication.initialStatus[0]?.name || 'Processing'}
@@ -799,19 +826,34 @@ export default function ApplicationsPage() {
                         
                         {/* Upload Button */}
                         <div>
-                          <label 
-                            htmlFor={`fileUpload-${index}`}
-                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
-                          >
-                            <FiUpload className="mr-1 h-4 w-4" />
-                            {doc.view ? 'Replace' : 'Upload'}
-                            <input 
-                              id={`fileUpload-${index}`}
-                              type="file" 
-                              className="hidden"
-                              onChange={(e) => handleViewFileChange(e, index)}
-                            />
-                          </label>
+                         <label 
+  htmlFor={`fileUpload-${index}`}
+  className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
+    uploadingDocuments[index] 
+      ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer'
+  } transition-colors`}
+  disabled={uploadingDocuments[index]}
+>
+  {uploadingDocuments[index] ? (
+    <>
+      <div className="animate-spin mr-2 h-4 w-4 border-2 border-gray-500 border-t-transparent rounded-full"></div>
+      Uploading...
+    </>
+  ) : (
+    <>
+      <FiUpload className="mr-1 h-4 w-4" />
+      {doc.view ? 'Replace' : 'Upload'}
+    </>
+  )}
+  <input 
+    id={`fileUpload-${index}`}
+    type="file" 
+    className="hidden"
+    onChange={(e) => handleViewFileChange(e, index)}
+    disabled={uploadingDocuments[index]}
+  />
+</label>
                         </div>
                       </div>
                     </div>
@@ -830,17 +872,29 @@ export default function ApplicationsPage() {
                 >
                   Close
                 </button>
-                {documentsModified && (
-                  <button
-                    onClick={handleSaveChanges}
-                    disabled={isUploading}
-                    className={`ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                      isUploading ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'
-                    } focus:outline-none`}
-                  >
-                    {isUploading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                )}
+            {documentsModified && (
+  <button 
+    onClick={handleSaveChanges}
+    disabled={isUploading || uploadingDocuments.some(status => status)}
+    className={`flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
+      isUploading || uploadingDocuments.some(status => status) 
+        ? 'bg-gray-200 text-gray-500' 
+        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+    }`}
+  >
+    {isUploading ? (
+      <>
+        <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+        Saving...
+      </>
+    ) : (
+      <>
+        <FiSave className="mr-1 h-4 w-4" />
+        Save Changes
+      </>
+    )}
+  </button>
+)}
               </div>
             </div>
           </div>
