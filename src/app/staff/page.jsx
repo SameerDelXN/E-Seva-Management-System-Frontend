@@ -6,6 +6,7 @@ import { FiRefreshCw, FiUpload, FiFile, FiList, FiCheckCircle, FiClock, FiUserCh
 import { useSession } from '@/context/SessionContext';
 import Link from 'next/link';
 import { uploadFile } from '@/utils/uploadFile';
+//sample
 export default function StaffDashboard() {
   const { session } = useSession();
   const [applications, setApplications] = useState([]);
