@@ -503,8 +503,8 @@ const AgentManagement = () => {
     >
       <option value="">Select a location</option>
       {locations.map((loc) => (
-        <option key={loc._id} value={loc.district}>
-          {loc.district}, {loc.state}
+        <option key={loc._id} value={loc.subdistrict}>
+          {loc.subdistrict}, {loc.district}
         </option>
       ))}
     </select>
@@ -1234,7 +1234,10 @@ const AgentManagement = () => {
       shopName: '',
       shopAddress: '',
       referralCode:'',
-      location:'',
+     location: {
+    subdistrict: '',
+    district: ''
+  },
       purchasePlan: '',
       documents: {
         aadharCard: '',
@@ -1767,43 +1770,50 @@ const AgentManagement = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                Location <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiMapPin className="text-gray-400" />
-                </div>
-                <select
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 appearance-none"
-                  disabled={locationsLoading}
-                >
-                  <option value="">Select a district</option>
-                  {locationsLoading ? (
-                    <option value="" disabled>Loading locations...</option>
-                  ) : (
-                    locations.map((location) => (
-                      <option key={location._id} value={location.district}>
-                        {location.district}, {location.state}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                  {locationsLoading ? (
-                    <FiLoader className="text-gray-500 animate-spin" />
-                  ) : (
-                    <FiChevronDown className="text-gray-500" />
-                  )}
-                </div>
-              </div>
-            </div>
+            
+  <div>
+    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+      Location <span className="text-red-500">*</span>
+    </label>
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <FiMapPin className="text-gray-400" />
+      </div>
+      <select
+        id="location"
+        name="location"
+        value={formData.location.subdistrict}
+        onChange={(e) => {
+          const selectedSubdistrict = e.target.value;
+          const selectedLocation = locations.find(
+            (loc) => loc.subdistrict === selectedSubdistrict
+          );
+          if (selectedLocation) {
+            setFormData((prev) => ({
+              ...prev,
+              location: {
+                subdistrict: selectedLocation.subdistrict,
+                district: selectedLocation.district
+              }
+            }));
+          }
+        }}
+        required
+        className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 appearance-none"
+      >
+        <option value="">Select a location</option>
+        {locations.map((location) => (
+          <option key={location._id} value={location.subdistrict}>
+            {location.subdistrict}, {location.district}
+          </option>
+        ))}
+      </select>
+      <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+        <FiChevronDown className="text-gray-500" />
+      </div>
+    </div>
+  </div>
+
 
             <div>
               <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">

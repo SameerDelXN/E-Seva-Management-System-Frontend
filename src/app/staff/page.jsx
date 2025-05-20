@@ -142,7 +142,7 @@ const cancelEditDeliveryDate = () => {
 
       // Prepare current status for history
       const currentStatusEntry = {
-        name: currentApp.initialStatus?.[0]?.name || currentApp.status || "Initiated",
+        name: currentApp.initialStatus?.[0]?.name || currentApp.status || "initiated",
         hexcode: currentApp.initialStatus?.[0].hexcode || "#A78BFA",
         reason: currentApp.initialStatus?.[0].reason || "",
         updatedAt: new Date(),
@@ -1237,7 +1237,59 @@ const handleFileChange = async (id, type, fileData) => {
                         </div>
                       </div>
                     </div>
-
+  <div className="mb-8">
+  <h4 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
+    <FiList className="text-indigo-500 mr-2" />
+    Form Data
+  </h4>
+  
+  {selectedApplication.formData && selectedApplication.formData.length > 0 ? (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-3 border-b border-gray-100">
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-1 text-xs font-semibold text-gray-600 uppercase tracking-wider">Sr.</div>
+          <div className="col-span-7 text-xs font-semibold text-gray-600 uppercase tracking-wider">Label</div>
+          <div className="col-span-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">Price</div>
+        </div>
+      </div>
+      
+      {/* Form Data Items */}
+      <div className="divide-y divide-gray-100">
+        {selectedApplication.formData.map((item, index) => (
+          <div key={item._id || index} className="px-6 py-4 transition-colors hover:bg-gray-50">
+            <div className="grid grid-cols-12 gap-4 items-center">
+              <div className="col-span-1">
+                <span className="flex items-center justify-center h-6 w-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
+                  {index + 1}
+                </span>
+              </div>
+              <div className="col-span-7">
+                <span className="text-sm font-medium text-gray-800">{item.label || `Item ${index + 1}`}</span>
+              </div>
+              <div className="col-span-4 text-right">
+                <span className="text-sm font-bold text-gray-800 bg-green-50 px-3 py-1 rounded-full">
+                  ₹{item.price || '0'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Summary Footer */}
+      
+    </div>
+  ) : (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center">
+      <div className="bg-indigo-50 p-3 rounded-full mb-3">
+        <FiList className="h-6 w-6 text-indigo-500" />
+      </div>
+      <p className="text-sm text-gray-500 mb-1">No Form Data Available</p>
+      <p className="text-xs text-gray-400">Form details will appear here when available</p>
+    </div>
+  )}
+</div>
                     {/* Documents Section */}
                     <div className="mb-6">
                       <h4 className="text-lg font-medium text-gray-700 mb-3">Documents</h4>

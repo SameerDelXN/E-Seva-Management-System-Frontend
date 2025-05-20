@@ -503,7 +503,7 @@ const StaffForm = ({ editingStaff, setShowAddForm, setEditingStaff,onSuccess  })
   <option value="">Select a location</option>
   {locations.map((location) => (
     <option key={location._id} value={location.district}>
-      {location.district}, {location.state}
+      {location.subdistrict}, {location.district}
     </option>
   ))}
 </Field>

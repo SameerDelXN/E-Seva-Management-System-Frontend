@@ -39,6 +39,11 @@ const ServiceModal = ({
   const [loading,setLoading] = useState(false);
   const [editingPriceId, setEditingPriceId] = useState(null);
 const [tempPrice, setTempPrice] = useState('');
+  const [tempPrices, setTempPrices] = useState({
+  totalFee: '',
+  governmentFee: '',
+  commissionFee: ''
+});
   
   const [statuses, setStatuses] = useState(service?.status || [
     { id: 1, status: 'OFFICE VR CARD ALE AHE', color: '#32a852', askReason: false },
@@ -91,16 +96,40 @@ const [tempPrice, setTempPrice] = useState('');
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-const handleEditPrice = (planId, currentPrice) => {
+const handleEditPrice = (planId, currentPrices) => {
   setEditingPriceId(planId);
-  // console.log("this is id",planId)
-  setTempPrice(currentPrice);
+  setTempPrices({
+    totalFee: currentPrices.TotalFee || '',
+    governmentFee: currentPrices.governmentFee || '',
+    commissionFee: currentPrices.commissionFee || ''
+  });
 };
 
+// const handlePriceChange = (e) => {
+//   const { name, value } = e.target;
+//   setTempPrices(prev => ({
+//     ...prev,
+//     [name]: value
+//   }));
+// };
 const handlePriceChange = (e) => {
-  setTempPrice(e.target.value);
+  const { name, value } = e.target;
+  
+  // Calculate the new prices
+  const newPrices = {
+    ...tempPrices,
+    [name]: value
+  };
+  
+  // If governmentFee or commissionFee changes, update totalFee
+  if (name === 'governmentFee' || name === 'commissionFee') {
+    const govFee = parseFloat(newPrices.governmentFee) || 0;
+    const commFee = parseFloat(newPrices.commissionFee) || 0;
+    newPrices.totalFee = (govFee + commFee).toString();
+  }
+  
+  setTempPrices(newPrices);
 };
-
 // const handleSavePrice = async (planId) => {
 //   try {
 //     // Update the price in your state
@@ -142,61 +171,82 @@ const handlePriceChange = (e) => {
   
 
 const handleSavePrice = async (planId) => {
-    try {
-      const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-plan-price/${formData.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          district: selectedPlan.name,
-          state: selectedPlan.state,
-          planId: planId,
-          newPrice: tempPrice
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update price');
-      }
-
-      const data = await response.json();
-      
-      // Update the local state with the new price
-      const updatedPlans = newplan.map(plan => 
-        plan._id === planId ? { ...plan, price: tempPrice } : plan
-      );
-      
-      selectnewplan(updatedPlans);
-      
-      // Also update the locations state if needed
-      const updatedLocations = locations.map(location => {
-        if (location.district === selectedPlan.name && location.state === selectedPlan.state) {
-          return {
-            ...location,
-            plans: location.plans.map(plan => 
-              plan._id === planId ? { ...plan, price: tempPrice } : plan
-            )
-          };
+  try {
+    const response = await fetch(`https://dokument-guru-backend.vercel.app/api/admin/newService/update-plan-price/${formData.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subdistrict: selectedPlan.name,
+        district: selectedPlan.district,
+        planId: planId,
+        newPrices: {
+          TotalFee: tempPrices.totalFee,
+          governmentFee: tempPrices.governmentFee,
+          commissionFee: tempPrices.commissionFee
         }
-        return location;
-      });
-      
-      setLocations(updatedLocations);
-      
-      // Reset editing state
-      setEditingPriceId(null);
-      setTempPrice('');
-      
-      // Show success message
-      console.log('Price updated successfully');
-      
-    } catch (error) {
-      console.error('Error updating price:', error);
-      // Optionally show error message to user
-    }
-  };
+      }),
+    });
 
+    if (!response.ok) {
+      throw new Error('Failed to update price');
+    }
+
+    const data = await response.json();
+    
+    // Update the local state with the new prices
+    const updatedPlans = newplan.map(plan => 
+      plan._id === planId ? { 
+        ...plan, 
+        price: {
+          TotalFee: tempPrices.totalFee,
+          governmentFee: tempPrices.governmentFee,
+          commissionFee: tempPrices.commissionFee
+        }
+      } : plan
+    );
+    
+    selectnewplan(updatedPlans);
+    
+    // Also update the locations state if needed
+    const updatedLocations = locations.map(location => {
+      if (location.subdistrict === selectedPlan.name && location.district === selectedPlan.district) {
+        return {
+          ...location,
+          plans: location.plans.map(plan => 
+            plan._id === planId ? { 
+              ...plan, 
+              price: {
+                TotalFee: tempPrices.totalFee,
+                governmentFee: tempPrices.governmentFee,
+                commissionFee: tempPrices.commissionFee
+              }
+            } : plan
+          )
+        };
+      }
+      return location;
+    });
+    
+    setLocations(updatedLocations);
+    
+    // Reset editing state
+    setEditingPriceId(null);
+    setTempPrices({
+      totalFee: '',
+      governmentFee: '',
+      commissionFee: ''
+    });
+    
+    // Show success message
+    console.log('Prices updated successfully');
+    
+  } catch (error) {
+    console.error('Error updating prices:', error);
+    // Optionally show error message to user
+  }
+};
 
 const handleDocChange = (index, value) => {
     const newDocs = [...formData.documents];
@@ -1134,7 +1184,7 @@ const handleDeleteStatus = (statusId) => {
                       type="number"
                       className="w-32 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="300.00"
-                      value={formData.price}
+                      value={formData.price.TotalFee}
                       onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                     />
                     <button 
@@ -1153,8 +1203,8 @@ const handleDeleteStatus = (statusId) => {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sub District</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                         </tr>
                       </thead>
@@ -1222,14 +1272,14 @@ const handleDeleteStatus = (statusId) => {
   {locations.map((item, index) => (
     <tr key={item._id}>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.district}</td> 
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.state}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.subdistrict}</td> 
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.district}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         <button
           onClick={() => handleAvailablePlansClick({
             id: item._id,
-            name: item.district,
-            state: item.state,
+            name: item.subdistrict,
+            district: item.district,
             plans: item.plans
           })}
           className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
@@ -1251,7 +1301,7 @@ const handleDeleteStatus = (statusId) => {
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">
-                    Prices without Subscription {selectedPlan && `- ${selectedPlan.name}, ${selectedPlan.state}`}
+                    Prices without Subscription {selectedPlan && `- ${selectedPlan.name}, ${selectedPlan.district}`}
                   </h2>
                   <button
                     onClick={() => {
@@ -1281,58 +1331,78 @@ const handleDeleteStatus = (statusId) => {
     <tr key={index}>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{planItem.planName}</td>
-         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 pl-12">
-  {editingPriceId === planItem._id ? (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        value={tempPrice}
-        onChange={handlePriceChange}
-        className="w-24 p-1 border border-gray-300 rounded"
-      />
-      <button 
-        onClick={() => handleSavePrice(planItem._id)}
-        className="px-2 py-1 bg-green-500 text-white rounded text-xs"
-      >
-        Save
-      </button>
-      <button 
-        onClick={() => {
-          setEditingPriceId(null);
-          setTempPrice('');
-        }}
-        className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
-      >
-        Cancel
-      </button>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2">
-      ₹ {planItem.price}
-      {/* <button 
-        onClick={() => handleEditPrice(planItem._id, planItem.price)}
-        className="ml-2 text-blue-500 hover:text-blue-700"
-        title="Edit price"
-      >
-        <Pencil className="w-4 h-4" />
-      </button> */}
-    </div>
-  )}
-</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 pl-12">
+        {editingPriceId === planItem._id ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="w-24">Total Fee:</span>
+              <input
+                type="number"
+                name="totalFee"
+                value={tempPrices.totalFee}
+                onChange={handlePriceChange}
+                className="w-24 p-1 border border-gray-300 rounded"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-24">Government Fee:</span>
+              <input
+                type="number"
+                name="governmentFee"
+                value={tempPrices.governmentFee}
+                onChange={handlePriceChange}
+                className="w-24 p-1 border border-gray-300 rounded"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-24">Commission Fee:</span>
+              <input
+                type="number"
+                name="commissionFee"
+                value={tempPrices.commissionFee}
+                onChange={handlePriceChange}
+                className="w-24 p-1 border border-gray-300 rounded"
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button 
+                onClick={() => handleSavePrice(planItem._id)}
+                className="px-2 py-1 bg-green-500 text-white rounded text-xs"
+              >
+                Save
+              </button>
+              <button 
+                onClick={() => {
+                  setEditingPriceId(null);
+                  setTempPrices({
+                    totalFee: '',
+                    governmentFee: '',
+                    commissionFee: ''
+                  });
+                }}
+                className="px-2 py-1 bg-gray-500 text-white rounded text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div>Total Fee: ₹ {planItem.price.TotalFee}</div>
+            <div>Government Fee: ₹ {planItem.price.governmentFee}</div>
+            <div>Commission Fee: ₹ {planItem.price.commissionFee}</div>
+            <button 
+              onClick={() => handleEditPrice(planItem._id, planItem.price)}
+              className="mt-1 text-blue-500 hover:text-blue-700 flex items-center gap-1 text-xs"
+            >
+              <Pencil className="w-3 h-3" /> Edit Prices
+            </button>
+          </div>
+        )}
+      </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         <button 
           onClick={() => handleEditPrice(planItem._id, planItem.price)}
-          // onClick={() =>
-          //    handleAddPricesClick({
-          //   id: planItem.plan_id,
-          //   name: planItem.planName,
-          //   govtPrice: planItem.price,
-          //   commissionPrice: '43.00',
-          //   taxPercentage: '0.00',
-          //   tatkalGovtPrice: planItem.price,
-          //   tatkalCommissionPrice: '43.00',
-          //   tatkalTaxPercentage: '0.00'
-          // })}
           className="px-4 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
         >
           Update Price

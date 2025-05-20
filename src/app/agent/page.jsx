@@ -54,7 +54,9 @@ const [openGroups, setOpenGroups] = useState({});
 
   // Agent's data from session
   const agentData = {
-    location: session?.user?.location, // This should be dynamic in your actual app
+    location: session?.user?.location,
+    district:session?.user?.location.district,
+    // This should be dynamic in your actual app
     purchasePlan: session?.user?.purchasePlan // Extracted from session data
   };
   
@@ -64,11 +66,13 @@ const [openGroups, setOpenGroups] = useState({});
     phone: '',
     email: '',
     address: '',
+    checkboxSelections: {},
     location:session?.user?.location,
     provider: {
       id:'',
       name:""
     }, 
+     ExpectedDays:0,
     date: new Date().toISOString().split('T')[0],
     delivery: calculateDeliveryDate(new Date(), 7),
     status: {
@@ -244,6 +248,34 @@ const [openGroups, setOpenGroups] = useState({});
   };
   
   console.log(serviceGroups)
+
+  const handleCheckboxChange = (e, label, price) => {
+  const { checked } = e.target;
+
+  setFormData(prev => {
+    const newCheckboxSelections = {
+      ...prev.checkboxSelections,
+      [label]: {
+        selected: checked,
+        price: price
+      }
+    };
+
+    // Calculate new modified price
+    const priceChange = checked ? price : -price;
+    const newModifiedPrice = prev.modifiedPrice + priceChange;
+
+    return {
+      ...prev,
+      checkboxSelections: newCheckboxSelections,
+      modifiedPrice: newModifiedPrice
+    };
+  });
+
+  if (checked) {
+    alert(`Service price increased by ₹${price} for ${label}`);
+  }
+};
   // Updated handle file change function to accept document type
   const handleFileChange = (e, documentType,name) => {
     const file = e.target.files[0];
@@ -325,7 +357,7 @@ const [openGroups, setOpenGroups] = useState({});
     console.log(agentData.location)
     // Find pricing for agent's location - note the spelling of "Maharastra"
     const locationPricing = service.planPrices.find(
-        pricing =>  pricing.district === agentData.location
+        pricing =>  pricing.subdistrict === agentData.location.subdistrict
     );
     
     if (!locationPricing) {
@@ -333,7 +365,7 @@ const [openGroups, setOpenGroups] = useState({});
         return 0;
     }
     
-    console.log("Location Price", locationPricing);
+    // console.log("Location Price", locationPricing);
     
     // Find the plan that matches the agent's purchased plan by planName
     const agentPlan = locationPricing.plans.find(
@@ -344,18 +376,18 @@ const [openGroups, setOpenGroups] = useState({});
         console.log("No matching plan found, using default");
     }
     
-    return agentPlan?.price || locationPricing.plans[0]?.price || 0;
+    return agentPlan?.price.TotalFee || locationPricing.plans[0]?.price.TotalFee || 0;
   };
 
   // Open modal with selected service
   const handleOpenModal = (serviceGroup, service) => {
-    
+    console.log("mianser",service);
     const price = getPriceForAgentPlan(service);
     
     setSelectedService({
       groupName: serviceGroup.name,
       ...service,
-      price: service.price
+      price: price
     });
     
     // Pre-populate form with service data including the service ID
@@ -365,7 +397,8 @@ const [openGroups, setOpenGroups] = useState({});
       serviceId: service.serviceId,
       amount: service.price,
       status: service.status,
-      delivery: calculateDeliveryDate(new Date(), 7),
+       ExpectedDays:service.ExpectedDays,
+      delivery: calculateDeliveryDate(new Date(), service.ExpectedDays),
       date: new Date().toISOString().split('T')[0],
       // Reset documents when opening a new form
       documents: [],
@@ -389,6 +422,12 @@ console.log("select",selectedService)
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+     const selectedOptions = Object.entries(formData.checkboxSelections)
+    .filter(([_, value]) => value.selected)
+    .map(([label, data]) => ({
+      label,
+      price: data.price
+    }));
     setFormLoading(true);
     setSubmissionStatus(null);
      const formattedDocuments = formData.documents.map(doc => ({
@@ -402,13 +441,16 @@ console.log("select",selectedService)
       name: formData.service,
       status: formData.status,
     };
-    
+    const totalSelectedOptionsPrice = selectedOptions.reduce((acc, curr) => acc + (curr.price || 0), 0);
     // Prepare data for submission
     const submissionData = {
       ...formData,
+
       service: serviceData,
-      amount: parseFloat(selectedService.price + modifiedPrice),
+      amount: parseFloat(selectedService.price + totalSelectedOptionsPrice),
+       selectedOptions, 
       date: new Date(formData.date).toISOString(),
+   delivery: calculateDeliveryDate(formData.date, formData.ExpectedDays),
       provider: {
         id:session?.user?._id,
         name:session?.user?.fullName
@@ -416,7 +458,7 @@ console.log("select",selectedService)
       // Format documents for API
        document: formattedDocuments,
     };
-    
+    console.log("Complete submission data:", submissionData);
     try {
       const response = await fetch("https://dokument-guru-backend.vercel.app/api/application/create", {
         method: 'POST',
@@ -456,6 +498,7 @@ console.log("select",selectedService)
           email: '',
           address: '',
           provider: 'Agent',
+          ExpectedDays:0,
           date: new Date().toISOString().split('T')[0],
           delivery: calculateDeliveryDate(new Date(), 7),
           status: {
@@ -901,8 +944,8 @@ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
           <h1 className="text-3xl font-bold text-gray-900">Dokument Guru Services</h1>
           <p className="text-gray-600 mt-2">Browse available services and track your applications</p>
           <div className="flex items-center mt-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
-              {agentData.location}
+            <span className="inline-flex capitalize items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
+              {agentData.location.subdistrict}-{agentData.location.district}
             </span>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {agentData.purchasePlan} Plan
@@ -1139,7 +1182,7 @@ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
               />
             </div>
           </div>
-          {
+          {/* {
             selectedService.formData.map((data)=>{
               if (data.inputType === 'checkbox') {
       return (
@@ -1171,7 +1214,25 @@ const DocumentUploadField = ({ documentType, label, onFileChange }) => {
               </div>
               </div> 
             })
-          }
+          } */}
+           {selectedService.formData
+        .filter(item => item.inputType === 'checkbox')
+        .map(item => (
+          <div key={item.label} className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id={`option-${item.label}`}
+              // checked={formData.checkboxSelections[item.label]?.selected || false}
+              checked={formData.checkboxSelections ? (formData.checkboxSelections[item.label]?.selected || false) : false}
+              onChange={(e) => handleCheckboxChange(e, item.label, item.price)}
+              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+            />
+            <label htmlFor={`option-${item.label}`} className="ml-2 text-sm text-gray-700">
+              {item.label} (+₹{item.price})
+            </label>
+          </div>
+        ))
+      }
           <div>
             <label className="block text-sm font-medium text-gray-700">Application Date</label>
             <div className="mt-1 relative rounded-md shadow-sm">

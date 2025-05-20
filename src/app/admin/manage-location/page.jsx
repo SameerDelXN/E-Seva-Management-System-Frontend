@@ -13,8 +13,8 @@ const LocationManagement = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [newLocation, setNewLocation] = useState({
+    subdistrict: '',
     district: '',
-    state: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,14 +52,14 @@ const LocationManagement = () => {
   const filteredLocations = locations.filter(location => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      (location.district && location.district.toLowerCase().includes(searchLower)) ||
-      (location.state && location.state.toLowerCase().includes(searchLower))
+      (location.subdistrict && location.subdistrict.toLowerCase().includes(searchLower)) ||
+      (location.district && location.district.toLowerCase().includes(searchLower))
     );
   });
 
   // Handle add location
   const handleAddLocation = async () => {
-    if (!newLocation.district || !newLocation.state) {
+    if (!newLocation.subdistrict || !newLocation.district) {
       setError('Please fill in all required fields');
       return;
     }
@@ -88,7 +88,7 @@ const LocationManagement = () => {
       const data = await fetchResponse.json();
       setLocations(data.locations);
       
-      setNewLocation({ district: '', state: '' });
+      setNewLocation({ subdistrict: '', district: '' });
       setIsAddModalOpen(false);
       setShowAddSuccess(true);
     } catch (err) {
@@ -101,7 +101,7 @@ const LocationManagement = () => {
 
   // Handle edit location
   const handleEditLocation = async () => {
-    if (!currentLocation || !currentLocation.district || !currentLocation.state) {
+    if (!currentLocation || !currentLocation.subdistrict || !currentLocation.district) {
       setError('Please fill in all required fields');
       return;
     }
@@ -118,8 +118,8 @@ const LocationManagement = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            district: currentLocation.district,
-            state: currentLocation.state
+            subdistrict: currentLocation.subdistrict,
+            district: currentLocation.district
           }),
         }
       );
@@ -266,7 +266,7 @@ const LocationManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                placeholder="Search by district or state..."
+                placeholder="Search by subdistrict or district..."
               />
             </div>
           </div>
@@ -281,8 +281,8 @@ const LocationManagement = () => {
                 <thead className="bg-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr. No.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sub District</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">District</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -291,8 +291,8 @@ const LocationManagement = () => {
                     filteredLocations.map((location, index) => (
                       <tr key={location._id} className="hover:bg-gray-50 transition-colors duration-150">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{location.district}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.state}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{location.subdistrict}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.district}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-4">
                           <button
                             onClick={() => openEditModal(location)}
@@ -348,6 +348,19 @@ const LocationManagement = () => {
                 )}
                 <div className="space-y-6">
                   <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sub District *</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newLocation.subdistrict}
+                        onChange={(e) => setNewLocation({ ...newLocation, subdistrict: e.target.value })}
+                        className={`w-full pl-10 pr-4 py-3 border ${newLocation.subdistrict ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                        placeholder="Enter sub district"
+                      />
+                      <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
+                    </div>
+                  </div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">District *</label>
                     <div className="relative">
                       <input
@@ -356,19 +369,6 @@ const LocationManagement = () => {
                         onChange={(e) => setNewLocation({ ...newLocation, district: e.target.value })}
                         className={`w-full pl-10 pr-4 py-3 border ${newLocation.district ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
                         placeholder="Enter district"
-                      />
-                      <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={newLocation.state}
-                        onChange={(e) => setNewLocation({ ...newLocation, state: e.target.value })}
-                        className={`w-full pl-10 pr-4 py-3 border ${newLocation.state ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                        placeholder="Enter state"
                       />
                       <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
                     </div>
@@ -387,9 +387,9 @@ const LocationManagement = () => {
                   </button>
                   <button
                     onClick={handleAddLocation}
-                    disabled={isSubmitting || !newLocation.district || !newLocation.state}
+                    disabled={isSubmitting || !newLocation.subdistrict || !newLocation.district}
                     className={`px-5 py-2.5 rounded-lg shadow-sm text-white flex items-center transition-colors duration-200 ${
-                      isSubmitting || !newLocation.district || !newLocation.state ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
+                      isSubmitting || !newLocation.subdistrict || !newLocation.district ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
                     } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
                   >
                     {isSubmitting ? (
@@ -434,6 +434,18 @@ const LocationManagement = () => {
                 )}
                 <div className="space-y-6">
                   <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sub District *</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={currentLocation.subdistrict}
+                        onChange={(e) => setCurrentLocation({ ...currentLocation, subdistrict: e.target.value })}
+                        className={`w-full pl-10 pr-4 py-3 border ${currentLocation.subdistrict ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
+                      />
+                      <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
+                    </div>
+                  </div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">District *</label>
                     <div className="relative">
                       <input
@@ -441,18 +453,6 @@ const LocationManagement = () => {
                         value={currentLocation.district}
                         onChange={(e) => setCurrentLocation({ ...currentLocation, district: e.target.value })}
                         className={`w-full pl-10 pr-4 py-3 border ${currentLocation.district ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
-                      />
-                      <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={currentLocation.state}
-                        onChange={(e) => setCurrentLocation({ ...currentLocation, state: e.target.value })}
-                        className={`w-full pl-10 pr-4 py-3 border ${currentLocation.state ? 'border-green-300' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all`}
                       />
                       <FiMapPin className="absolute left-3 top-3.5 text-gray-400" />
                     </div>
@@ -471,9 +471,9 @@ const LocationManagement = () => {
                   </button>
                   <button
                     onClick={handleEditLocation}
-                    disabled={isSubmitting || !currentLocation.district || !currentLocation.state}
+                    disabled={isSubmitting || !currentLocation.subdistrict || !currentLocation.district}
                     className={`px-5 py-2.5 rounded-lg shadow-sm text-white flex items-center transition-colors duration-200 ${
-                      isSubmitting || !currentLocation.district || !currentLocation.state ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
+                      isSubmitting || !currentLocation.subdistrict || !currentLocation.district ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
                     } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
                   >
                     {isSubmitting ? (
@@ -524,7 +524,7 @@ const LocationManagement = () => {
                     <div className="ml-3">
                       <h3 className="text-sm font-medium text-yellow-800">Warning</h3>
                       <p className="mt-2 text-sm text-yellow-700">
-                        Are you sure you want to delete the location <span className="font-medium">{currentLocation.district}, {currentLocation.state}</span>? This action cannot be undone.
+                        Are you sure you want to delete the location <span className="font-medium">{currentLocation.subdistrict}, {currentLocation.district}</span>? This action cannot be undone.
                       </p>
                     </div>
                   </div>
@@ -570,7 +570,7 @@ const LocationManagement = () => {
           <AddSuccessPopup 
             onClose={() => {
               setShowAddSuccess(false);
-              setNewLocation({ district: '', state: '' });
+              setNewLocation({ subdistrict: '', district: '' });
             }} 
           />
         )}
