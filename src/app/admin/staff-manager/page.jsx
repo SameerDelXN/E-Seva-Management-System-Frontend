@@ -332,7 +332,7 @@ const StaffManagement = () => {
               disabled={isAssigned && !editingStaff}
               className={isAssigned && !editingStaff ? 'text-gray-400 bg-gray-100' : ''}
             >
-              {location.district}, {location.state}
+              {location.subdistrict}, {location.district}
               {isAssigned && !editingStaff && ' (Already assigned)'}
             </option>
           );

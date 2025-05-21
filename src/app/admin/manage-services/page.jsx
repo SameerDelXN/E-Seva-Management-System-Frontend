@@ -64,8 +64,14 @@ const AddServiceModal = ({ isOpen, onClose, onSave, serviceGroups }) => {
     serviceGroupId: serviceGroups && serviceGroups.length > 0 ? serviceGroups[0]?._id : "",
     document: [""],
     visibility: "both",
-    availablity: "subscription",
-    price: 0,
+    ExpectedDays:0,
+    // availablity: "subscription",
+    price: {
+  commissionFee: 0,
+  governmentFee: 0,
+  TotalFee: 0
+},
+
     planPrices: [],
     status:
     [
@@ -120,12 +126,12 @@ const [plans,setPlans]=useState(null);
         const data = await response.json();
         setLocations(data.locations || []);
         setPlans(data.plans || []);
-        
+        console.log("data of locaiotn",)
         // Initialize planPrices structure
         const initialPlanPrices = data.locations?.map(location => ({
           location: location._id,
-          state:location.state,
           district:location.district,
+          subdistrict:location.subdistrict,
           plans: data.plans?.map(plan => ({
             plan: plan._id,
             planName:plan.name,
@@ -161,10 +167,21 @@ const [plans,setPlans]=useState(null);
     }
   }, [serviceGroups]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+ const handleInputChange = (e) => {
+  const { name, value } = e.target;
+
+  if (name === 'commissionFee' || name === 'governmentFee') {
+    const newPrice = {
+      ...formData.price,
+      [name]: Number(value)
+    };
+    newPrice.TotalFee = (newPrice.commissionFee || 0) + (newPrice.governmentFee || 0);
+    setFormData({ ...formData, price: newPrice });
+  } else {
     setFormData({ ...formData, [name]: value });
-  };
+  }
+};
+
 
   const addDocument = () => {
     setFormData({
@@ -298,7 +315,7 @@ const [plans,setPlans]=useState(null);
               </select>
             </div>
             
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
               <select
                 name="availablity"
@@ -310,19 +327,55 @@ const [plans,setPlans]=useState(null);
                 <option value="oneTime">One Time</option>
                 <option value="both">Both</option>
               </select>
-            </div>
+            </div> */}
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (₹)</label>
+          <div className="">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expected Delivery Days</label>
             <input
               type="number"
-              name="price"
-              value={formData.price}
+              name="ExpectedDays"
+              value={formData.ExpectedDays}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+         
           </div>
+
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Commission Fee (₹)</label>
+    <input
+      type="number"
+      name="commissionFee"
+      value={formData.price.commissionFee}
+      onChange={handleInputChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Government Fee (₹)</label>
+    <input
+      type="number"
+      name="governmentFee"
+      value={formData.price.governmentFee}
+      onChange={handleInputChange}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Total Fee (₹)</label>
+    <input
+      type="number"
+      name="TotalFee"
+      value={formData.price.TotalFee}
+      readOnly
+      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+    />
+  </div>
+</div>
+
 
           <div className="flex justify-end space-x-3 pt-4">
             <button
@@ -383,7 +436,7 @@ const App = () => {
  
   const fetchServices = async () => {
     try {
-      const res = await fetch(" https://dokument-guru-backend.vercel.app/api/admin/newService/fetch-all-services");
+      const res = await fetch("https://dokument-guru-backend.vercel.app/api/admin/newService/fetch-all-services");
       const data = await res.json();
 
       if (res.ok) {
@@ -481,13 +534,14 @@ const App = () => {
        // Send the service group ID
       document: serviceData.document, // array of strings
       visibility: serviceData.visibility || "both",
-      availablity: serviceData.availablity || "subscription",
+      ExpectedDays:serviceData.ExpectedDays,
+      // availablity: serviceData.availablity || "subscription",
       price: serviceData.price || 0,
       planPrices: serviceData.planPrices && Array.isArray(serviceData.planPrices) 
         ? serviceData.planPrices.map(planPrice => ({
             location: planPrice.location,
-            state:planPrice.state,
             district:planPrice.district,
+            subdistrict:planPrice.subdistrict,
             plans: planPrice.plans && Array.isArray(planPrice.plans) 
               ? planPrice.plans.map(p => ({
 
