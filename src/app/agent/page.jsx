@@ -6,7 +6,7 @@ import axios from 'axios';
 export default function ServiceGroupsUI() {
   const { session } = useSession();
   const [serviceGroups, setServiceGroups] = useState([]);
-   const [walletAmount, setWalletAmount] = useState(null);
+   const [walletAmount, setWalletAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,7 +55,7 @@ const [openGroups, setOpenGroups] = useState({});
   // Agent's data from session
   const agentData = {
     location: session?.user?.location,
-    district:session?.user?.location.district,
+    district:session?.user?.location?.district,
     // This should be dynamic in your actual app
     purchasePlan: session?.user?.purchasePlan // Extracted from session data
   };
@@ -166,7 +166,7 @@ const [openGroups, setOpenGroups] = useState({});
       }
       
       try {
-        const response = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/wallet/${session.user._id}`);
+        const response = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/wallet/${session?.user?._id}`);
         const data = await response.json();
         
         if (data.success) {
@@ -352,32 +352,25 @@ const [openGroups, setOpenGroups] = useState({});
   };
   
   // Get price based on agent's plan
-  const getPriceForAgentPlan = (service) => {
-    console.log("price service", service);
-    console.log(agentData.location)
-    // Find pricing for agent's location - note the spelling of "Maharastra"
-    const locationPricing = service.planPrices.find(
-        pricing =>  pricing.subdistrict === agentData.location.subdistrict
-    );
-    
-    if (!locationPricing) {
-        console.log("No pricing found for location:", agentData.location);
-        return 0;
-    }
-    
-    // console.log("Location Price", locationPricing);
-    
-    // Find the plan that matches the agent's purchased plan by planName
-    const agentPlan = locationPricing.plans.find(
-        plan => plan.planName.toLowerCase() === agentData.purchasePlan.toLowerCase()
-    );
-    
-    if (!agentPlan) {
-        console.log("No matching plan found, using default");
-    }
-    
-    return agentPlan?.price.TotalFee || locationPricing.plans[0]?.price.TotalFee || 0;
-  };
+ const getPriceForAgentPlan = (service) => {
+  if (!service?.planPrices) return 0;
+  
+  // Add proper null checks
+  const agentLocation = agentData.location || {};
+  const agentPlan = agentData.purchasePlan || '';
+  
+  const locationPricing = service.planPrices.find(
+    pricing => pricing.subdistrict === agentLocation.subdistrict
+  ) || service.planPrices[0]; // Fallback to first pricing if none found
+  
+  if (!locationPricing) return 0;
+  
+  const agentPlanPrice = locationPricing.plans.find(
+    plan => plan.planName.toLowerCase() === agentPlan.toLowerCase()
+  ) || locationPricing.plans[0]; // Fallback to first plan
+  
+  return agentPlanPrice?.price?.TotalFee || 0;
+};
 
   // Open modal with selected service
   const handleOpenModal = (serviceGroup, service) => {
@@ -481,7 +474,7 @@ console.log("select",selectedService)
       // Refresh applications list
       if (session?.user?._id) {
         try {
-          const appResponse = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/application/${session.user._id}`);
+          const appResponse = await fetch(`https://dokument-guru-backend.vercel.app/api/agent/application/${session?.user?._id}`);
           const appData = await appResponse.json();
           setApplications(appData.data || []);
         } catch (error) {
