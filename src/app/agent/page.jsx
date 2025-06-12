@@ -140,7 +140,7 @@ const [openGroups, setOpenGroups] = useState({});
     const fetchServiceGroups = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/getAll-Groups');
+        const response = await fetch('https://dokument-guru-backend.vercel.app/api/admin/serviceGroup/fetch-by-visibility');
         
         if (!response.ok) {
           throw new Error(`Failed to fetch service groups: ${response.status}`);

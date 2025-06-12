@@ -254,6 +254,13 @@ console.log(formatDate("2025-05-31")); // Output: 31/05/2025
   };
   const saveStatus = (id) => {
     console.log(editingStatus)
+     const statusOption = combinedStatusOptions.find(option => option.name === editingStatus);
+  
+  // If status requires reason and reason is empty, show alert and prevent saving
+  if (statusOption?.askreason && !statusReason.trim()) {
+    alert("Please provide a reason for this status change");
+    return;
+  }
     updateStatus(id, editingStatus, statusReason);
   };
   // Create new application
@@ -633,6 +640,7 @@ const addDocumentRemark = async () => {
       alert("Failed to update remark. Please try again.");
     }
   };  
+  
   const addDocRemark = async () => {
     if (!newDocRemark.trim() || !selectedDoc || !detailsApplication) return;
     
@@ -1047,6 +1055,7 @@ const handleRemoveReceipt = async (applicationId) => {
                                                              </select>
                                                              <button 
                                                                onClick={() => saveStatus(application._id)}
+                                                               disabled={showReasonField && !statusReason.trim()}
                                                                className="text-green-600 hover:text-green-900"
                                                              >
                                                                <FiSave className="h-4 w-4" />
@@ -1060,14 +1069,21 @@ const handleRemoveReceipt = async (applicationId) => {
                                                            </div>
                                                            
                                                            {showReasonField && (
+                                                             <div className="flex flex-col">
                                                              <input
                                                                type="text"
                                                                placeholder="Enter reason"
+                                                               required
                                                                value={statusReason}
                                                                onChange={(e) => setStatusReason(e.target.value)}
                                                                className="text-xs border border-gray-300 rounded p-1 w-full"
                                                              />
-                                                           )}
+                                                              {!statusReason.trim() && (
+          <span className="text-xs text-red-500 mt-1">Reason is required for this status</span>
+        )}
+      </div>
+                                                           )
+                                                           }
                                                          </div>
                                                        ) : (
                                                          <div className="flex items-center space-x-2">
