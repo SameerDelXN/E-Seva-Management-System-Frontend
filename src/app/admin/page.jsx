@@ -6,7 +6,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { FiRefreshCw,FiSave ,FiDownload,FiList  ,FiMessageSquare ,FiPlus ,FiEye, FiX , FiUpload, FiFile, FiCheckCircle, FiClock, FiDollarSign, FiTrash2, FiEdit } from 'react-icons/fi';
 import { uploadFile } from '@/utils/uploadFile';
+import { FaLess } from 'react-icons/fa';
 export default function Dashboard() {
+  const [uploadingDocument,setUploadingDocument] = useState(false) 
+  const [uploadingReceipt,setUploadingReceipt] = useState(false) 
   const {data:session}=useSession()
   const [applications, setApplications] = useState([]);
   const [currentStaffName, setCurrentStaffName] = useState(session?.user?.name);
@@ -369,10 +372,12 @@ console.log(formatDate("2025-05-31")); // Output: 31/05/2025
   };
 
 const handleFileChange = async (id, type, fileData) => {
+  
   try {
     let updateData;
     
     if (type === 'document') {
+      // setUploadingDocument(true)
       // For documents - add to array while preserving existing documents
       const currentApp = applications.find(app => app._id === id);
       const currentDocuments = currentApp?.document || [];
@@ -402,7 +407,7 @@ const handleFileChange = async (id, type, fileData) => {
     setApplications(applications.map(app => 
       app._id === id ? updatedApplication : app
     ));
-    
+    // setUploadingDocument(false)
     fetchApplications();
     
     if (fileData) {
@@ -699,8 +704,14 @@ const addDocumentRemark = async () => {
   if (!file) return;
 
   try {
+    if(type==="document"){
+      setUploadingDocument(true)
+    }else if(type==="receipt"){
+      setUploadingReceipt(true)
+    }
     const uploadResponse = await uploadFile(file);
-    
+    setUploadingDocument(false)
+    setUploadingReceipt(false)
     const fileData = {
       name: file.name,
       type: file.type || file.name.split('.').pop(),
@@ -710,11 +721,13 @@ const addDocumentRemark = async () => {
     };
 
     if (type === 'document') {
+      // setUploadingDocument(true)
       // For documents - add to array
       const currentApp = applications.find(app => app._id === applicationId);
       const currentDocuments = currentApp?.document || [];
       
       await handleFileChange(applicationId, type, [...currentDocuments, fileData]);
+      
     } else {
       // For receipts - set the value
       await handleFileChange(applicationId, type, { view: uploadResponse.documentUrl });
@@ -1125,7 +1138,7 @@ const handleRemoveReceipt = async (applicationId) => {
           onChange={(e) => handleFileUpload(e, application._id, 'document')}
         />
         <FiUpload className="h-4 w-4 text-gray-500 mr-1" />
-        <span className="text-sm text-gray-700">Upload</span>
+        {uploadingDocument ? <span className="text-sm text-gray-700">Uploading</span> : <span className="text-sm text-gray-700">Upload</span>}
          <button 
           onClick={() => openViewModal(application)}
           className="text-blue-600 hover:text-blue-900 text-sm"
@@ -1165,7 +1178,7 @@ const handleRemoveReceipt = async (applicationId) => {
           accept="image/*,.pdf"
         />
         <FiUpload className="h-4 w-4 text-gray-500 mr-1" />
-        <span className="text-sm text-gray-700">Upload</span>
+        {uploadingReceipt ? <span className="text-sm text-gray-700">Uploading</span> : <span className="text-sm text-gray-700">Upload</span>}
       </label>
     )}
   </div>
@@ -1605,10 +1618,11 @@ function StatusBadge({ status }) {
 // File Upload Component with conditional viewing
 // File Upload Component
 // File Upload Component
+// File Upload Component with loading state
 function FileUpload({ id, type, onChange, file, status }) {
   const [uploading, setUploading] = useState(false);
   
-  const MAX_FILE_SIZE = 256 * 1024 ; // 5MB in bytes (increased from 256KB)
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
@@ -1647,49 +1661,45 @@ function FileUpload({ id, type, onChange, file, status }) {
 
   return (
     <div className="flex items-center">
-      {file && file.view ? (
+      {uploading ? (
+        // Show loading state while uploading
+        <div className="flex items-center space-x-2 text-gray-500">
+          <FiRefreshCw className="animate-spin h-4 w-4" />
+          <span className="text-sm">Uploading...</span>
+        </div>
+      ) : file && file.view ? (
+        // Show uploaded file info
         <div className="flex items-center space-x-2">
-          {uploading ? (
-            <FiRefreshCw className="animate-spin h-4 w-4 text-gray-500" />
-          ) : (
-            <>
-              <span className="text-sm text-gray-500">
-                {isReceipt ? 'Receipt' : 'Uploaded'}
-              </span>
-              <a 
-                href={file.view} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-indigo-600 hover:text-indigo-900 text-sm"
-              >
-                View
-              </a>
-              {/* Add delete option for receipts */}
-              {isReceipt && (
-                <button 
-                  onClick={() => onChange(id, type, null)}
-                  className="text-red-500 hover:text-red-700"
-                  title="Remove receipt"
-                >
-                  <FiTrash2 className="h-4 w-4" />
-                </button>
-              )}
-            </>
+          <span className="text-sm text-gray-500">
+            {isReceipt ? 'Receipt' : 'Uploaded'}
+          </span>
+          <a 
+            href={file.view} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-indigo-600 hover:text-indigo-900 text-sm"
+          >
+            View
+          </a>
+          {/* Add delete option for receipts */}
+          {isReceipt && (
+            <button 
+              onClick={() => onChange(id, type, null)}
+              className="text-red-500 hover:text-red-700"
+              title="Remove receipt"
+            >
+              <FiTrash2 className="h-4 w-4" />
+            </button>
           )}
         </div>
       ) : (
+        // Show upload button when no file is uploaded
         <label className="cursor-pointer">
           <div className="flex items-center space-x-1">
-            {uploading ? (
-              <FiRefreshCw className="animate-spin h-4 w-4 text-gray-500" />
-            ) : (
-              <>
-                <FiUpload className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700">
-                  {isReceipt ? 'Upload Receipt' : 'Upload Document'}
-                </span>
-              </>
-            )}
+            <FiUpload className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-700">
+              {isReceipt ? 'Upload Receipt' : 'Upload Document'}
+            </span>
           </div>
           <input 
             type="file" 

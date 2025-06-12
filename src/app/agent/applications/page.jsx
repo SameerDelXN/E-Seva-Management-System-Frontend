@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FiFile, FiEye,FiList, FiCalendar, FiX, FiPackage, FiClock, FiFileText, FiUser, FiPhone, FiMail, FiMapPin, 
+import { FiFile, FiEye,FiList, FiCalendar, FiX, FiPackage,FiCreditCard, FiClock, FiFileText, FiUser, FiPhone, FiMail, FiMapPin, 
   FiDownload, FiTrash2, FiChevronLeft, FiChevronRight, FiSave, FiUpload, FiSearch, FiFilter } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
 import axios from 'axios';
@@ -285,6 +285,7 @@ export default function ApplicationsPage() {
 
   // Handle viewing application details
   const handleViewDetails = (application) => {
+    console.log("appi = ",application)
     setSelectedApplication(application);
     setIsViewModalOpen(true);
   };
@@ -506,7 +507,8 @@ export default function ApplicationsPage() {
                           <div className="text-sm text-gray-900">{application.service.name}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span 
+                          <div className="flex flex-col items-center">
+                             <span 
                             className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
                             style={{ 
                               backgroundColor: application.initialStatus[0]?.hexcode || '#e5e7eb',
@@ -515,7 +517,10 @@ export default function ApplicationsPage() {
                           >
                             {application.initialStatus[0]?.name || 'Pending'}
                           </span>
-                        </td>
+                          <span className='text-red-500 text-xs'>{application.initialStatus[0]?.reason ? application.initialStatus[0]?.reason : null }</span>
+                        
+                          </div>
+                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           ₹{application.amount}
                         </td>
@@ -580,7 +585,7 @@ export default function ApplicationsPage() {
         </div>
 
         {/* View Application Modal */}
-        {isViewModalOpen && selectedApplication && (
+     {isViewModalOpen && selectedApplication && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               {/* Header */}
@@ -694,7 +699,8 @@ export default function ApplicationsPage() {
                     {selectedApplication.service.status.map((statusItem, index) => {
                       // Find the current status index
                       const currentStatusIndex = selectedApplication.service.status.findIndex(
-                        s => s._id === selectedApplication.initialStatus[0]?._id
+                        s =>
+                          s.name.toLowerCase() === selectedApplication.initialStatus[0]?.name.toLowerCase()
                       );
                       
                       // Check if this status is completed (before current status)
@@ -799,6 +805,10 @@ export default function ApplicationsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Receipt Section */}
+            
+
               {/* Document Section */}
               <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mb-6">
                 <div className="flex items-center justify-between mb-5">
@@ -853,14 +863,14 @@ export default function ApplicationsPage() {
                                   <FiEye className="mr-1 h-3 w-3" />
                                   View Document
                                 </a>
-                                <a 
+                                {/* <a 
                                   href={doc.view} 
                                   download
                                   className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                                 >
                                   <FiDownload className="mr-1 h-3 w-3" />
                                   Download
-                                </a>
+                                </a> */}
                               </div>
                             ) : (
                               <p className="text-xs text-red-500 mt-1">Document not uploaded yet</p>
@@ -875,9 +885,11 @@ export default function ApplicationsPage() {
                             )}
                           </div>
                         </div>
-                        
+                        {/* <h1>{selectedApplication.initialStatus[0].name}</h1> */}
                         {/* Upload Button */}
-                        <div>
+                       {
+                        selectedApplication.initialStatus[0]?.name==="Objection" ? 
+                         <div>
                          <label 
   htmlFor={`fileUpload-${index}`}
   className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
@@ -894,10 +906,11 @@ export default function ApplicationsPage() {
     </>
   ) : (
     <>
-      <FiUpload className="mr-1 h-4 w-4" />
+      <FiUpload className="mr-1 h-4 w-4" /> 
       {doc.view ? 'Replace' : 'Upload'}
     </>
   )}
+  
   <input 
     id={`fileUpload-${index}`}
     type="file" 
@@ -906,13 +919,67 @@ export default function ApplicationsPage() {
     disabled={uploadingDocuments[index]}
   />
 </label>
-                        </div>
+                        </div> : null
+                       }
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-              
+                <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm mb-6">
+                <div className="flex items-center mb-5">
+                  <div className="p-2 bg-green-100 rounded-lg mr-3">
+                    <FiCreditCard className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900">Receipt</h4>
+                </div>
+                
+                {selectedApplication.receipt && selectedApplication.receipt.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedApplication.receipt.map((receiptUrl, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start">
+                            <div className="p-2 bg-white border border-gray-200 rounded-lg mr-3">
+                              <FiCreditCard className="h-5 w-5 text-green-500" />
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900">Receipt {index + 1}</h5>
+                              <div className="mt-2 flex items-center space-x-3">
+                                <a 
+                                  href={receiptUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                                >
+                                  <FiEye className="mr-1 h-3 w-3" />
+                                  View Receipt
+                                </a>
+                                <a 
+                                  href={receiptUrl} 
+                                  download
+                                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                  <FiDownload className="mr-1 h-3 w-3" />
+                                  Download
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center">
+                    <div className="bg-green-50 p-3 rounded-full mb-3">
+                      <FiCreditCard className="h-6 w-6 text-green-500" />
+                    </div>
+                    <p className="text-sm text-gray-500 mb-1">No Receipt Available</p>
+                    <p className="text-xs text-gray-400">Payment receipt will appear here when available</p>
+                  </div>
+                )}
+              </div>
   
            
               
