@@ -1186,12 +1186,14 @@ const handleFileChange = async (id, type, fileData) => {
   <h4 className="text-sm font-medium text-gray-500">Delivery Date</h4>
   {editingDeliveryDate ? (
     <div className="mt-1 flex items-center space-x-2">
-      <input
-        type="date"
-        value={tempDeliveryDate}
-        onChange={(e) => setTempDeliveryDate(e.target.value)}
-        className="text-sm border border-gray-300 rounded p-1"
-      />
+     <input
+  type="date"
+  value={tempDeliveryDate}
+  onChange={(e) => setTempDeliveryDate(e.target.value)}
+  className="text-sm border border-gray-300 rounded p-1"
+  min={new Date().toISOString().split('T')[0]} // sets today as the minimum
+/>
+
       <button 
         onClick={() => saveDeliveryDate(selectedApplication._id)}
         className="text-green-600 hover:text-green-800"
@@ -1311,11 +1313,14 @@ const handleFileChange = async (id, type, fileData) => {
                                     {doc.remark ? "View Remark" : "Add Remark"}
                                   </button>
                                   <Link
-                                    href={doc.view}
-                                    className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center"
-                                  >
-                                    <FiDownload className="mr-1 h-3 w-3" /> View
-                                  </Link>
+  href={doc.view}
+  className="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <FiDownload className="mr-1 h-3 w-3" /> View
+</Link>
+
                                 </div>
                               </div>
                             ))}
