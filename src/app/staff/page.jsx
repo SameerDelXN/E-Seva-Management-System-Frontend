@@ -588,7 +588,7 @@ const handleFileChange = async (id, type, fileData) => {
         receipt: fileData ? [fileData.view] : [] 
       };
     }
-
+//sample
     const response = await fetch(`${API_BASE_URL}/update/${id}`, {
       method: 'PUT',
       headers: {
@@ -886,6 +886,7 @@ const handleFileChange = async (id, type, fileData) => {
     <p><DeliveryDateAlert deliveryDate={application.delivery} /></p>
   )}
 </td>
+
                           {/* <td className="px-6 py-4 whitespace-nowrap">
                             {editingStatusId === application._id ? (
                               <div className="flex flex-col space-y-2">
