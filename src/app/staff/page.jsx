@@ -880,7 +880,12 @@ const handleFileChange = async (id, type, fileData) => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{application.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(application.date).toLocaleDateString('en-GB')}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{application.delivery}</div><p><DeliveryDateAlert deliveryDate={application.delivery} /></p></td>
+                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+  <div>{application.delivery}</div>
+  {!['Completed', 'Objection'].includes(getCurrentStatus(application)) && (
+    <p><DeliveryDateAlert deliveryDate={application.delivery} /></p>
+  )}
+</td>
                           {/* <td className="px-6 py-4 whitespace-nowrap">
                             {editingStatusId === application._id ? (
                               <div className="flex flex-col space-y-2">

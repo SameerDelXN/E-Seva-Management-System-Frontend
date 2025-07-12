@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { FiFile, FiEye,FiList, FiCalendar, FiX, FiPackage,FiCreditCard, FiClock, FiFileText, FiUser, FiPhone, FiMail, FiMapPin, 
+import { FiFile, FiEye,FiList, FiCalendar, FiX, FiPackage,FiCreditCard, FiClock, FiFileText, FiUser,FiCheck , FiPhone, FiMail, FiMapPin, 
   FiDownload, FiTrash2, FiChevronLeft, FiChevronRight, FiSave, FiUpload, FiSearch, FiFilter } from 'react-icons/fi';
 import { useSession } from '@/context/SessionContext';
 import axios from 'axios';
@@ -289,6 +289,36 @@ export default function ApplicationsPage() {
     setSelectedApplication(application);
     setIsViewModalOpen(true);
   };
+ const handleDownloadReceipt = (receipt) => {
+  try {
+    if (!receipt) {
+      console.error('No receipt available');
+      return;
+    }
+
+    // Check if receipt is a string (URL) or an object
+    const receiptUrl = typeof receipt === 'string' ? receipt : receipt.view;
+    const receiptName = typeof receipt === 'string' 
+      ? `receipt_${new Date().getTime()}.pdf` 
+      : receipt.name || `receipt_${new Date().getTime()}.pdf`;
+
+    // Create temporary anchor element
+    const link = document.createElement('a');
+    link.href = receiptUrl;
+    link.download = receiptName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Fallback for browsers that don't support download
+    setTimeout(() => {
+      window.open(receiptUrl, '_blank');
+    }, 100);
+  } catch (error) {
+    console.error('Error downloading receipt:', error);
+    alert('Failed to download receipt. Please try again.');
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -298,6 +328,73 @@ export default function ApplicationsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Your Applications</h1>
           <p className="text-gray-600 mt-2">Track status and details of all customer applications</p>
         </div>
+        
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {/* Total Applications Card */}
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Applications</p>
+        <p className="mt-2 text-3xl font-semibold text-gray-900">{applications.length}</p>
+      </div>
+      <div className="p-3 rounded-full bg-indigo-100 text-indigo-600">
+        <FiFile className="h-6 w-6" />
+      </div>
+    </div>
+  </div>
+
+  {/* Completed Applications Card */}
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Completed</p>
+        <p className="mt-2 text-3xl font-semibold text-gray-900">
+          {applications.filter(app => 
+            app.initialStatus[0]?.name === 'Completed' || 
+            app.initialStatus[0]?.name === 'Delivered'
+          ).length}
+        </p>
+      </div>
+      <div className="p-3 rounded-full bg-green-100 text-green-600">
+        <FiCheck className="h-6 w-6" />
+      </div>
+    </div>
+  </div>
+
+  {/* In Progress Applications Card */}
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">In Progress</p>
+        <p className="mt-2 text-3xl font-semibold text-gray-900">
+          {applications.filter(app => 
+            app.initialStatus[0]?.name !== 'Completed' && 
+            app.initialStatus[0]?.name !== 'Delivered' &&
+            app.initialStatus[0]?.name !== 'Rejected'
+          ).length}
+        </p>
+      </div>
+      <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+        <FiClock className="h-6 w-6" />
+      </div>
+    </div>
+  </div>
+
+  {/* Total Revenue Card */}
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Revenue</p>
+        <p className="mt-2 text-3xl font-semibold text-gray-900">
+          ₹{applications.reduce((sum, app) => sum + (app.amount || 0), 0)}
+        </p>
+      </div>
+      <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+        <FiCreditCard className="h-6 w-6" />
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Filter Section */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mb-6">
@@ -461,87 +558,96 @@ export default function ApplicationsPage() {
           ) : (
             <div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Customer
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Service
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Submitted
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Delivery
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {currentApplications.map((application) => (
-                      <tr key={application._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center">
-                              <span className="text-gray-600 font-medium">
-                                {application.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{application.name}</div>
-                              <div className="text-sm text-gray-500">{application.phone}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{application.service.name}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col items-center">
-                             <span 
-                            className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
-                            style={{ 
-                              backgroundColor: application.initialStatus[0]?.hexcode || '#e5e7eb',
-                              color: getContrastColor(application.initialStatus[0]?.hexcode || '#e5e7eb')
-                            }}
-                          >
-                            {application.initialStatus[0]?.name || 'Pending'}
-                          </span>
-                          <span className='text-red-500 text-xs'>{application.initialStatus[0]?.reason ? application.initialStatus[0]?.reason : null }</span>
-                        
-                          </div>
-                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ₹{application.amount}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(application.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {application.delivery}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleViewDetails(application)}
-                            className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
-                          >
-                            <FiEye className="mr-1" /> View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <table className="min-w-full divide-y divide-gray-200">
+  <thead className="bg-gray-50">
+    <tr>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Customer
+      </th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Service
+      </th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Status
+      </th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Amount
+      </th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Submitted
+      </th>
+      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Delivery
+      </th>
+      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Actions
+      </th>
+    </tr>
+  </thead>
+  <tbody className="bg-white divide-y divide-gray-200">
+    {currentApplications.map((application) => (
+      <tr key={application._id} className="hover:bg-gray-50">
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center">
+              <span className="text-gray-600 font-medium">
+                {application.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="ml-4">
+              <div className="text-sm font-medium text-gray-900">{application.name}</div>
+              <div className="text-sm text-gray-500">{application.phone}</div>
+            </div>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="text-sm text-gray-900">{application.service.name}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex flex-col items-center">
+            <span 
+              className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full py-1"
+              style={{ 
+                backgroundColor: application.initialStatus[0]?.hexcode || '#e5e7eb',
+                color: getContrastColor(application.initialStatus[0]?.hexcode || '#e5e7eb')
+              }}
+            >
+              {application.initialStatus[0]?.name || 'Pending'}
+            </span>
+            <span className='text-red-500 text-xs'>
+              {application.initialStatus[0]?.reason ? application.initialStatus[0]?.reason : null}
+            </span>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          ₹{application.amount}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {new Date(application.createdAt).toLocaleDateString()}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {application.delivery}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+  <button
+    onClick={() => handleViewDetails(application)}
+    className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
+  >
+    <FiEye className="mr-1" /> View
+  </button>
+  {application.receipt && application.receipt.length > 0 && (
+    <button
+      onClick={() => handleDownloadReceipt(application.receipt[0])} // Using first receipt if multiple exist
+      className="text-green-600 hover:text-green-900 inline-flex items-center"
+    >
+      <FiDownload className="mr-1" /> Receipt
+    </button>
+  )}
+</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
               </div>
               
               {/* Pagination controls */}
