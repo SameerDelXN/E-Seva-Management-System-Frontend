@@ -222,7 +222,7 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                     width={40}
                     height={40}
                     src="/images/logo.svg"
-                    alt="Dokument Guru Logo"
+                    alt="Infognite Logo"
                     className="w-10 h-10 mr-3 rounded-full flex-shrink-0"
                   />
                 </motion.div>
@@ -230,7 +230,7 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                   className="text-lg font-bold text-gray-800 truncate"
                   variants={textVariants}
                 >
-                  Dokument Guru
+                  Infognite
                 </motion.span>
               </motion.div>
             ) : (
@@ -248,7 +248,7 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                   width={40}
                   height={40}
                   src="/images/logo.svg"
-                  alt="Dokument Guru Logo"
+                  alt="Infognite Logo"
                   className="w-10 h-10 rounded-full"
                 />
               </motion.div>
@@ -437,7 +437,7 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3 }}
             >
-              <p className="text-xs text-gray-500">© 2025 Dokument Guru</p>
+              <p className="text-xs text-gray-500">© 2025 Infognite</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -486,12 +486,12 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
                       width={40}
                       height={40} 
                       src="/images/logo.svg" 
-                      alt="Dokument Guru Logo" 
+                      alt="Infognite Logo" 
                       className="w-10 h-10 mr-3 rounded-full flex-shrink-0"
                     />
                   </motion.div>
                   <span className="text-lg font-bold text-gray-800 truncate">
-                    Dokument Guru
+                    Infognite
                   </span>
                 </div>
                 
@@ -618,7 +618,7 @@ const AdminSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
 
               {/* Footer for mobile */}
               <div className="p-4 border-t border-gray-200 text-center">
-                <p className="text-xs text-gray-500">© 2025 Dokument Guru</p>
+                <p className="text-xs text-gray-500">© 2025 Infognite</p>
               </div>
             </motion.div>
           </>

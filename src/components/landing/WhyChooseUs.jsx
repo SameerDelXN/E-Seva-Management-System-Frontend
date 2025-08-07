@@ -34,7 +34,7 @@ const WhyChooseUs = () => {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Why Trust DokumentGuru?
+            Why Trust Infognite?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             We're committed to providing seamless, secure, and efficient document solutions.

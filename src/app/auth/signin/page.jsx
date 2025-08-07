@@ -81,9 +81,9 @@ const SignInPage = () => {
             alt="Management Illustration" 
             className="mx-auto mb-8 rounded-xl shadow-2xl max-w-2/3 h-auto transform hover:scale-105 transition-transform duration-300"
           />
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">Dokument Guru</h2>
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">Infognite</h2>
           <p className="text-xl opacity-80 max-w-md mx-auto">
-            Fast, Reliable, Hassle-Free e-Seva with Dokument Guru!
+            Fast, Reliable, Hassle-Free e-Seva with Infognite!
           </p>
         </div>
       </div>

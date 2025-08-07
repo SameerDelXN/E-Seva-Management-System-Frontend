@@ -61,14 +61,14 @@ const Navbar = () => {
           <div className="flex items-center space-x-3">
             <img
               src="/images/logo.svg"
-              alt="Dokument Guru Logo"
+              alt="Infognite Logo"
               className="h-10 w-10 object-contain"
             />
             <a
               href="/"
               className="text-2xl font-bold text-green-600 flex items-center"
             >
-              Dokument Guru
+              Infognite
               <Shield className="ml-2 text-green-500" size={20} />
             </a>
           </div>

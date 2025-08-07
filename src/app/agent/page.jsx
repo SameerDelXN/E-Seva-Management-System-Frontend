@@ -280,7 +280,7 @@ const handleFileChange = async (documentType, file) => {
     formData.append('file', file);
     
     const response = await axios.post(
-      'https://dokument-guru-backend.vercel.app/api/upload/doc',
+      'http://localhost:3000/api/upload/doc',
       formData,
       {
         headers: {
@@ -599,7 +599,7 @@ const handleFileChange = async (documentType, file) => {
       formData.append('file', file);
       
       const response = await axios.post(
-        'https://dokument-guru-backend.vercel.app/api/upload/doc',
+        'http://localhost:3000/api/upload/doc',
         formData,
         {
           headers: {
@@ -665,7 +665,7 @@ const handleFileChange = async (documentType, file) => {
       formData.append('file', file);
       
       const response = await axios.post(
-        'https://dokument-guru-backend.vercel.app/api/upload/doc',
+        'http://localhost:3000/api/upload/doc',
         formData,
         {
           headers: {
@@ -1143,7 +1143,7 @@ const handleUploadError = (errorMessage) => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dokument Guru Services</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Infognite Services</h1>
           <p className="text-gray-600 mt-2">Browse available services and track your applications</p>
           <div className="flex items-center mt-2">
             <span className="inline-flex capitalize items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">

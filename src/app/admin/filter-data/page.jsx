@@ -568,7 +568,7 @@ const DokumentGuruFilterPage = () => {
           <span className="hidden sm:inline">Last Sync: {new Date().toLocaleTimeString('en-IN')}</span>
         </div>
         <div className="flex items-center">
-          <span className="hidden md:inline mr-4">DokumentGuru v2.4.1</span>
+          <span className="hidden md:inline mr-4">Infognite v2.4.1</span>
           <span>
             {new Date().toLocaleDateString('en-IN', { 
               weekday: 'short', 

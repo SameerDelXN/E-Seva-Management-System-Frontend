@@ -29,7 +29,7 @@ const CTASection = () => {
             </h2>
 
             <p className="text-xl text-white/80 mb-8 max-w-2xl">
-              Experience hassle-free document processing with DokumentGuru. Your one-stop solution for all legal documentation needs.
+              Experience hassle-free document processing with Infognite. Your one-stop solution for all legal documentation needs.
             </p>
 
             {/* CTA Buttons */}
