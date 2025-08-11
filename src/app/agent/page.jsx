@@ -556,6 +556,7 @@ const handleFileChange = async (documentType, file) => {
     }, 2000);
     window.location.reload()
   } catch (error) {
+    //sample
     console.error('Error submitting application:', error);
     setSubmissionStatus({ success: false, message: `Failed to submit application: ${error.message}` });
   } finally {
