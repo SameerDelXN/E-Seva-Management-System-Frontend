@@ -89,10 +89,10 @@ const Footer = () => {
         <div>
           <h4 className="text-lg font-semibold mb-4">Contact Info</h4>
           <div className="space-y-2">
-            <p className="text-green-600">Email: support@dokumentguru.com</p>
+            <p className="text-green-600">Email: infognite2@gmail.com</p>
             <p className="text-green-600">Phone: +1 (555) 123-4567</p>
             <p className="mt-4 text-sm text-green-700">
-              © {new Date().getFullYear()} DokumentGuru. 
+              © {new Date().getFullYear()} Infognite. 
               All Rights Reserved.
             </p>
           </div>

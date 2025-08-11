@@ -98,7 +98,7 @@ const FAQSection = () => {
             Can't find the answer you're looking for?
           </p>
           <a
-  href="https://mail.google.com/mail/?view=cm&fs=1&to=support@dokumentguru.com&su=Support%20Request&body=Hello%2C%20I%20need%20assistance%20with%20your%20services."
+  href="https://mail.google.com/mail/?view=cm&fs=1&to=infognite2@gmail.com&su=Support%20Request&body=Hello%2C%20I%20need%20assistance%20with%20your%20services."
   target="_blank"
   rel="noopener noreferrer"
   className="

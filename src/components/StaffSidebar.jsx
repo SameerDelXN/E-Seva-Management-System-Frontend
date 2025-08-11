@@ -364,7 +364,7 @@ const StaffSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3 }}
             >
-              <p className="text-xs text-gray-500">© 2025 Dokument Guru</p>
+              <p className="text-xs text-gray-500">© 2025 Infognite</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -495,7 +495,7 @@ const StaffSidebar = ({ onToggle, isMobileOpen, setIsMobileOpen }) => {
 
               {/* Footer for mobile */}
               <div className="p-4 border-t border-gray-200 text-center">
-                <p className="text-xs text-gray-500">© 2025 Dokument Guru</p>
+                <p className="text-xs text-gray-500">© 2025 Infognite</p>
               </div>
             </motion.div>
           </>

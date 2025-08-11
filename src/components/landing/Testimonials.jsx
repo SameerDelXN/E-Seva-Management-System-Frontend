@@ -9,7 +9,7 @@ const Testimonials = () => {
     {
       name: "Rajesh Kumar",
       position: "Small Business Owner",
-      review: "DokumentGuru transformed my document processing. What used to take weeks now takes just hours. Incredibly efficient and reliable!",
+      review: "Infognite transformed my document processing. What used to take weeks now takes just hours. Incredibly efficient and reliable!",
       rating: 5,
       image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXnsiObBEA0LnJHpO-nMoeau3_TeWILh7t6A&s"
     },
@@ -23,7 +23,7 @@ const Testimonials = () => {
     {
       name: "Amit Patel",
       position: "Corporate Professional",
-      review: "Government-approved services with top-notch security. DokumentGuru has become my go-to platform for all legal document needs.",
+      review: "Government-approved services with top-notch security. Infognite has become my go-to platform for all legal document needs.",
       rating: 5,
       image: "https://source.boomplaymusic.com/buzzgroup1/M00/35/64/rBEeLGLFWs-ATBLoAAJA2iDwLWE854.jpg"
     },

@@ -1130,7 +1130,7 @@ const downloadBillPdf = (bill) => {
             margin: 0;
             letter-spacing: 1px;
           ">
-            Dokument Guru
+            Infognite
           </h1>
           <p style="color: #777; margin: 5px 0 0; font-size: 14px;">
             Professional Documentation Services
@@ -1280,8 +1280,8 @@ const downloadBillPdf = (bill) => {
         <p style="margin: 5px 0;">Please make payment within 15 days of receiving this invoice</p>
         <p style="margin: 5px 0;">
           For any queries, contact us at 
-          <a href="mailto:support@dokumentguru.com" style="color: #4CAF50; text-decoration: none;">
-            support@dokumentguru.com
+          <a href="mailto:infognite2@gmail.com" style="color: #4CAF50; text-decoration: none;">
+            infognite2@gmail.com
           </a>
         </p>
         <p style="margin: 10px 0 0; font-style: italic;">
@@ -1323,7 +1323,7 @@ const downloadBillPdf = (bill) => {
       const element = document.createElement('div');
       element.innerHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #008000; text-align: center; font-size: 24px; margin-bottom: 5px;">Dokument Guru</h1>
+          <h1 style="color: #008000; text-align: center; font-size: 24px; margin-bottom: 5px;">Infognite</h1>
           <h2 style="text-align: center; font-size: 18px; margin-top: 0; margin-bottom: 15px;">Bills Summary</h2>
           
           ${(filters.dateFrom || filters.dateTo) ? `

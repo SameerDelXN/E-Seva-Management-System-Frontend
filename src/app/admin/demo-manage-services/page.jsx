@@ -1299,12 +1299,12 @@ const ServiceModal = ({
                       </tr>
                       <tr>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">4</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dokument Guru Gold</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Infognite Gold</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <button 
                             onClick={() => handleAddPricesClick({
                               id: 4,
-                              name: 'Dokument Guru Gold',
+                              name: 'Infognite Gold',
                               govtPrice: '107.00',
                               commissionPrice: '43.00',
                               taxPercentage: '0.00',
